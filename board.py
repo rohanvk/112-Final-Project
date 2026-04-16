@@ -8,6 +8,21 @@ class Cell:
         self.revealed = False
         self.flagged = False
         self.adjacentMines = 0
+        self.isAnimating = False #animation data
+        self.animScale = 1.0     
+        self.animDx = 0         
+        self.animDy = 0         
+        self.animOffsetX = 0   
+        self.animOffsetY = 0
+        self.flagScale = 0.0
+        self.isFlagAnimating = False
+        self.isFlagDespawning = False
+        self.flagDespawnScale = 1.0
+        self.flagDespawnOffsetX = 0
+        self.flagDespawnOffsetY = 0
+        self.flagDespawnDx = 0
+        self.flagDespawnDy = 0
+        self.waveDelay = 0
 
 def placeMines(app, startRow, startCol):
     #Safe zone (the clicked cell and its 8 neighbors) some ai used here for planning
@@ -56,9 +71,8 @@ def checkWin(app):
         for col in range(app.cols):
             cell = app.board[row][col]
             if not cell.hasMine and not cell.revealed:
-                return
-    app.gameOver = True
-    print("You Win!")
+                return False
+    return True
 
 def revealCell(app, r, c): # recursive reveal
     if not (0 <= r < app.rows and 0 <= c < app.cols): return
@@ -66,7 +80,15 @@ def revealCell(app, r, c): # recursive reveal
     if cell.revealed: return
 
     cell.revealed = True
+    cell.isAnimating = True
+    cell.animScale = 1.0
+    cell.animOffsetX = 0
+    cell.animOffsetY = 0
+    cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
+    cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
+
     if cell.adjacentMines == 0:
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
                 revealCell(app, r + dr, c + dc)
+

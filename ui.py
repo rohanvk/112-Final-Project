@@ -30,7 +30,7 @@ def drawCells(app):
                     drawRect(l, t, w, h, fill=mineBgColor)
                     
                     # center = dark color
-                    radius = min(w, h) * 0.35
+                    radius = min(w, h) * 0.25
                     drawCircle(cx, cy, radius, fill=mineCircleColor)
                 else:
                     # dirt checker
@@ -61,7 +61,10 @@ def drawCells(app):
                 drawRect(l, t, w, h, fill=cellColor)
                 
                 if cell.flagged:
-                    drawImage(app.flagImage, cx, cy, align='center',width=w*0.8, height=h*0.8)
+                    if cell.flagScale > 0:
+                        sw = w * 0.8 * cell.flagScale
+                        sh = h * 0.8 * cell.flagScale
+                        drawImage(app.flagImage, cx, cy, align='center',width=sw, height=sh)
 
     # Loop 2 to draw an edge between the borders of the grass and opened cells, ai assisted
     edgeColor = rgb(135, 175, 58)
@@ -90,6 +93,54 @@ def drawCells(app):
                 # if right
                 if col < app.cols - 1 and not app.board[row][col+1].revealed:
                     drawLine(l + w, t, l + w, t + h, fill=edgeColor, lineWidth=edgeThickness)
+
+    # animation loop, used ai for this
+    for row in range(app.rows):
+        for col in range(app.cols):
+            cell = app.board[row][col]
+            
+            if cell.isAnimating:
+                l, t = getCellLeftTop(app, row, col)
+                w, h = getCellSize(app)
+                
+                # get size
+                animW = w * cell.animScale
+                animH = h * cell.animScale
+                
+                # randomly move
+                cx = l + w/2 + cell.animOffsetX
+                cy = t + h/2 + cell.animOffsetY
+                
+                # get new location
+                animL = cx - animW/2
+                animT = cy - animH/2
+                
+                # get color
+                if (row + col) % 2 == 0:
+                    grassColor = rgb(170, 215, 81)
+                else: #used ai for this, makes grass flash or checkered if not opened
+
+                    isFlashing = getattr(app, 'winFlashTimer', 0) > 0
+                    if app.hoveredCell == (row, col) or isFlashing:
+                        grassColor = rgb(191, 225, 125) # Flash / Hover effect
+                    elif (row + col) % 2 == 0:
+                        grassColor = rgb(170, 215, 81)  # Light grass
+                    else:
+                        grassColor = rgb(162, 209, 73)  # Dark grass
+                    
+                    drawRect(animL, animT, animW, animH, fill=grassColor)
+
+            if cell.isFlagDespawning: #similar logic for the flags
+                if cell.flagDespawnScale > 0.01: #cmu graphics hates 0
+                    l, t = getCellLeftTop(app, row, col)
+                    w, h = getCellSize(app)
+                    
+                    sw = w * 0.8 * cell.flagDespawnScale
+                    sh = h * 0.8 * cell.flagDespawnScale
+                    cx = l + w/2 + cell.flagDespawnOffsetX
+                    cy = t + h/2 + cell.flagDespawnOffsetY
+                    
+                    drawImage(app.flagImage, cx, cy, align='center', width=sw, height=sh)
 
 def drawBoard(app):
     for row in range(app.rows):
