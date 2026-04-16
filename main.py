@@ -1,11 +1,15 @@
 from cmu_graphics import *
-import random
+from PIL import Image as PILImage
+import time #need because otherwise timer tracks framerate
+from board import *
+from ui import *
+from solver import *
 
 def onAppStart(app):
     app.width = app.height = 750
-    app.stepsPerSecond = 10
-    app.rows = 30
-    app.cols = 30
+    app.stepsPerSecond = 30
+    app.rows = 20
+    app.cols = 20
     app.boardLeft = 10
     app.boardTop = 100
     app.boardWidth = 600
@@ -17,7 +21,38 @@ def onAppStart(app):
     app.gameOver = False
     app.prob = 0.3
     app.firstClick = True
-    app.timer = 0
+    app.startTime = time.time()
+    app.timer = 1
+    app.hoveredCell = None
+
+    app.numberColors = {
+        1: (rgb(72, 133, 237), rgb(47, 86, 154)),   # Blue
+        2: (rgb(0, 135, 68), rgb(0, 88, 44)),       # Green
+        3: (rgb(219, 50, 54), rgb(142, 33, 35)),    # Red
+        4: (rgb(182, 72, 242), rgb(118, 47, 157)),  # Purple
+        5: (rgb(244, 132, 13), rgb(159, 86, 8)),    # Orange
+        6: (rgb(72, 230, 241), rgb(47, 150, 157)),  # Cyan
+        7: (rgb(237, 68, 181), rgb(154, 44, 118)),  # Pink
+        8: (rgb(244, 194, 13), rgb(159, 126, 8))    # Yellow
+    }
+    app.textColors = {
+        1: rgb(25, 118, 210),   # Blue
+        2: rgb(56, 142, 60),    # Green
+        3: rgb(211, 47, 47),    # Red
+        4: rgb(123, 31, 162),   # Purple
+        5: rgb(255, 143, 0),    # Orange
+        6: rgb(0, 152, 165),    # Teal
+        7: rgb(66, 66, 66),     # Dark Gray
+        8: rgb(160, 159, 158)   # Light Gray
+    }
+
+    #image optimization (ai helped with this)
+    imageWidth = 60
+    imageHeight = 60
+        
+    rawFlag = PILImage.open('images/flag.png')
+    resizedFlag = rawFlag.resize((imageWidth, imageHeight))
+    app.flagImage = CMUImage(resizedFlag)
 
 def restartApp(app):
     app.paused = False
@@ -25,50 +60,18 @@ def restartApp(app):
     app.score = 0
     app.gameOver = False
     app.firstClick = True
-    app.timer = 0
+    app.timer = 1
+    app.startTime = time.time()
 
-def placeMines(app, startRow, startCol):
-    #Safe zone (the clicked cell and its 8 neighbors)
-    safeZones = []
-    for dr in [-1, 0, 1]:
-        for dc in [-1, 0, 1]:
-            safeZones.append((startRow + dr, startCol + dc))
-
-    # Place the mines
-    for row in range(app.rows):
-        for col in range(app.cols):
-            if (row, col) not in safeZones:
-                if random.random() < app.prob:
-                    app.board[row][col].hasMine = True
-    
-    #Count neighbors
-    for row in range(app.rows):
-        for col in range(app.cols):
-            if not app.board[row][col].hasMine:
-                count = 0
-                for dr in [-1, 0, 1]:
-                    for dc in [-1, 0, 1]:
-                        nr, nc = row + dr, col + dc
-                        if (0 <= nr < app.rows and 0 <= nc < app.cols and 
-                            app.board[nr][nc].hasMine):
-                            count += 1
-                app.board[row][col].adjacentMines = count
-
-class Cell:
-    def __init__(self, row, col):
-        self.row, self.col = row, col
-        self.hasMine = False
-        self.revealed = False
-        self.flagged = False
-        self.adjacentMines = 0
+def onMouseMove(app, mouseX, mouseY):
+    if app.gameOver:
+        app.hoveredCell = None
+        return
         
-def getCell(app, x, y):
-    if (app.boardLeft <= x <= app.boardLeft + app.boardWidth and
-        app.boardTop <= y <= app.boardTop + app.boardHeight):
-        col = int((x - app.boardLeft) / (app.boardWidth / app.cols))
-        row = int((y - app.boardTop) / (app.boardHeight / app.rows))
-        return (row, col)
-    return None
+    coords = getCell(app, mouseX, mouseY)
+    
+    if app.hoveredCell != coords:
+        app.hoveredCell = coords
 
 def onMousePress(app, mouseX, mouseY, button):
     if app.gameOver: return
@@ -98,33 +101,6 @@ def onMousePress(app, mouseX, mouseY, button):
             revealCell(app, row, col)
             checkWin(app)
 
-def revealAllMines(app):
-    for row in range(app.rows):
-        for col in range(app.cols):
-            if app.board[row][col].hasMine:
-                app.board[row][col].revealed = True
-
-def checkWin(app):
-    for row in range(app.rows):
-        for col in range(app.cols):
-            cell = app.board[row][col]
-            if not cell.hasMine and not cell.revealed:
-                return
-    app.gameOver = True
-    print("You Win!")
-
-def revealCell(app, r, c): #iterative not recursive bc we want to limit the revealed cells
-    if not (0 <= r < app.rows and 0 <= c < app.cols): return
-    cell = app.board[r][c]
-    if cell.revealed: return
-    
-    cell.revealed = True
-    # Recursive reveal if the cell is empty (0 neighbors)
-    if cell.adjacentMines == 0:
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                revealCell(app, r + dr, c + dc)
-
 def onKeyPress(app, key):
     if app.gameOver:
         restartApp(app)
@@ -139,7 +115,7 @@ def onStep(app):
         takeStep(app)
 
 def takeStep(app):
-    app.timer += 0.1
+    app.timer = int(time.time() - app.startTime)
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill='darkGray') # Background
@@ -156,67 +132,6 @@ def redrawAll(app):
                   size=40, bold=True, fill='white', border='black')
         drawLabel('Press any key to restart', app.width/2, app.height/2 + 50, 
                   size=20, fill='white')
-    
-def drawTimer(app):
-    drawOval(app.width-25, 50, 150, 50, fill='lightblue', align='right')
-    drawLabel(f'Timer: {pythonRound(app.timer, 2)}', app.width-150, 50,align='left', size=20)
-
-
-def drawStatus(app):
-    drawLabel(f'Score: {app.score}', 50, 50, size=20, align='left')
-    drawLabel('Minesweeper', app.width/2, 50, size=30, bold=True)
-    
-def drawCells(app):
-    for row in range(app.rows):
-        for col in range(app.cols):
-            cell = app.board[row][col]
-            l, t = getCellLeftTop(app, row, col)
-            w, h = getCellSize(app)
-            
-            if cell.revealed:
-                drawRect(l, t, w, h, fill='white', border='black', borderWidth=0.5)
-                if cell.hasMine:
-                    drawCircle(l + w/2, t + h/2, w/3, fill='black')
-                elif cell.adjacentMines > 0:
-                    drawLabel(cell.adjacentMines, l + w/2, t + h/2, size=w*0.8)
-            elif cell.flagged:
-                drawLabel('🚩', l + w/2, t + h/2, size=w*0.8)
-
-def drawBoard(app):
-    for row in range(app.rows):
-        for col in range(app.cols):
-            color = 'lightGray'
-            drawCell(app, row, col,color)
-
-def drawBoardBorder(app):
-  # draw the board outline (with double-thickness):
-  drawRect(app.boardLeft, app.boardTop, app.boardWidth, app.boardHeight,
-           fill=None, border='black',
-           borderWidth=2*app.cellBorderWidth)
-
-def drawCell(app, row, col, color):
-    cellLeft, cellTop = getCellLeftTop(app, row, col)
-    cellWidth, cellHeight = getCellSize(app)
-    drawRect(cellLeft, cellTop, cellWidth, cellHeight,
-             fill=color, border='black',
-             borderWidth=app.cellBorderWidth)
-
-def getCellLeftTop(app, row, col):
-    cellWidth, cellHeight = getCellSize(app)
-    cellLeft = app.boardLeft + col * cellWidth
-    cellTop = app.boardTop + row * cellHeight
-    return (cellLeft, cellTop)
-
-def getCellSize(app):
-    cellWidth = app.boardWidth / app.cols
-    cellHeight = app.boardHeight / app.rows
-    return (cellWidth, cellHeight)
-
-def resizeBoard(app, numRows, numCols, boardSize):
-    app.rows = numRows
-    app.cols = numCols
-    app.boardLeft, app.boardWidth, app.boardHeight = boardSize
-    app.board = [[Cell(row, col) for col in range (app.cols)] for row in range(app.rows)]
 
 def main():
     runApp()
