@@ -1,3 +1,5 @@
+#For all citations of AI, Gemini Pro 3.1 was used
+
 from cmu_graphics import *
 from PIL import Image as PILImage
 import time #need because otherwise timer tracks framerate
@@ -8,8 +10,8 @@ from solver import *
 def onAppStart(app):
     app.width = app.height = 750
     app.stepsPerSecond = 20
-    app.rows = 5
-    app.cols = 5
+    app.rows = 25
+    app.cols = 21
     app.boardLeft = 10
     app.boardTop = 100
     app.boardWidth = 600
@@ -27,6 +29,22 @@ def onAppStart(app):
     app.confetti = []
     app.bestScores = []
     app.winFlashTimer = 0
+    app.isDropdownOpen = False
+    app.menuHoveredItem = None
+    app.currentDifficulty = "Medium"
+    app.menuShiftX = 15       
+    app.checkmarkIndentX = 30
+    app.difficulties = {
+        "Easy": (8, 10, 10),
+        "Medium": (14, 18, 40),
+        "Hard": (20, 24, 99)
+    }
+    
+    # Menu location and size
+    app.menuX = 20
+    app.menuY = 15
+    app.menuW = 120
+    app.menuH = 40
 
     app.numberColors = {
         1: (rgb(72, 133, 237), rgb(47, 86, 154)),   # Blue
@@ -56,6 +74,10 @@ def onAppStart(app):
     rawFlag = PILImage.open('images/flag.png')
     resizedFlag = rawFlag.resize((imageWidth, imageHeight))
     app.flagImage = CMUImage(resizedFlag)
+    rawArrow = PILImage.open('images/downArrow.png')
+    app.downArrow = CMUImage(rawArrow)
+    rawCheck = PILImage.open('images/checkmark.png')
+    app.checkmark = CMUImage(rawCheck)
 
 def restartApp(app):
     app.paused = False
@@ -78,9 +100,40 @@ def onMouseMove(app, mouseX, mouseY):
     if app.hoveredCell != coords:
         app.hoveredCell = coords
 
+    #used some ai to get the hover for the menu
+    if getattr(app, 'isDropdownOpen', False):
+            menuOptX = app.menuX + app.menuShiftX
+            menuOptTop = app.menuY + app.menuH
+            menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
+            
+            if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
+                app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
+            else:
+                app.menuHoveredItem = None
+
 def onMousePress(app, mouseX, mouseY, button):
-    if app.gameOver: return
+    #used AI to help with this (dropdown menu)
+    menuOptX = app.menuX + app.menuShiftX
+    # Shift menu over
+    menuOptTop = app.menuY + app.menuH
+    menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
     
+    # Clicked option?
+    if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:        
+        itemIdx = (mouseY - menuOptTop) // app.menuH        
+        for i, diffName in enumerate(app.difficulties.keys()):
+            if i == itemIdx:
+                app.currentDifficulty = diffName
+                app.rows, app.cols, app.numMines = app.difficulties[diffName]
+                restartApp(app)
+        return
+    app.isDropdownOpen = False 
+    # Clicked menu?
+    if app.menuX <= mouseX <= app.menuX + app.menuW and app.menuY <= mouseY <= app.menuY + app.menuH:
+        app.isDropdownOpen = True
+        return
+    if app.gameOver: return
+
     coords = getCell(app, mouseX, mouseY)
     if coords is None: return
     row, col = coords
@@ -121,9 +174,11 @@ def onMousePress(app, mouseX, mouseY, button):
             for r in range(app.rows):
                 for c in range(app.cols):
                     checkCell = app.board[r][c]
+                    if r-row == 0 and c - col == 0:
+                        checkCell.waveDelay = 1
                     if (checkCell.hasMine or checkCell.flagged) and not checkCell.revealed:
                         dist = ((r - row)**2 + (c - col)**2)**0.5
-                        checkCell.waveDelay = int(dist * 3)
+                        checkCell.waveDelay = int(dist * 12)
 
         else:
             revealCell(app, row,col)
@@ -182,7 +237,7 @@ def onStep(app):
             
             # if cell animating, change animation
             if cell.isAnimating:
-                cell.animScale -= 0.15      # Shrink by 15% every frame
+                cell.animScale -= 0.11     # Shrink by 10% every frame
                 cell.animOffsetX += cell.animDx # Move X
                 cell.animOffsetY += cell.animDy # Move Y
                 
@@ -213,7 +268,7 @@ def onStep(app):
             for r in range(app.rows):
                 for c in range(app.cols):
                     cell = app.board[r][c]
-                    if (cell.hasMine or cell.flagged) and not cell.revealed and cell.waveDelay > 0:
+                    if (cell.hasMine or cell.flagged) and cell.waveDelay > 0:
                         cell.waveDelay -= 1
                         if cell.waveDelay <= 0:
                             if cell.flagged:
@@ -224,36 +279,36 @@ def onStep(app):
                                 cell.flagDespawnOffsetY = 0
                                 cell.flagDespawnDy = random.uniform(-18, -10)
                                 cell.flagDespawnDx = random.uniform(-10, 10)
-                        if cell.hasMine:
-                            cell.revealed = True
-                            cell.isAnimating = True
-                            cell.animScale = 1.0
-                            cell.animOffsetX = 0
-                            cell.animOffsetY = 0
-                            cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
-                            cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
+                            if cell.hasMine:
+                                cell.revealed = True
+                                cell.isAnimating = True
+                                cell.animScale = 1.0
+                                cell.animOffsetX = 0
+                                cell.animOffsetY = 0
+                                cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
+                                cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
 
-                            # get unique color
-                            colorIndex = (r * 11 + c * 17) % 8 + 1
-                            mineBgColor, _ = app.numberColors[colorIndex]
-                            # get cell center
-                            l, t = getCellLeftTop(app, r, c)
-                            w, h = getCellSize(app)
-                            cx, cy = l + w/2, t + h/2
-                            if not hasattr(app, 'confetti'): app.confetti = [] # make sure we have app.confetti
-                            # add 8 particles for loss
-                            for _ in range(8):
-                                app.confetti.append({
-                                    'x': cx,
-                                    'y': cy,
-                                    # Go UP (Dy is negative)
-                                    'dy': random.uniform(-18, -10), 
-                                    # Sideways
-                                    'dx': random.uniform(-10, 10),    
-                                    'size': random.randint(8, 16),
-                                    # Use unique colors
-                                    'color': mineBgColor 
-                                })
+                                # get unique color
+                                colorIndex = (r * 11 + c * 17) % 8 + 1
+                                mineBgColor, _ = app.numberColors[colorIndex]
+                                # get cell center
+                                l, t = getCellLeftTop(app, r, c)
+                                w, h = getCellSize(app)
+                                cx, cy = l + w/2, t + h/2
+                                if not hasattr(app, 'confetti'): app.confetti = [] # make sure we have app.confetti
+                                # add 8 particles for loss
+                                for _ in range(8):
+                                    app.confetti.append({
+                                        'x': cx,
+                                        'y': cy,
+                                        # Go UP (Dy is negative)
+                                        'dy': random.uniform(-4, -3), 
+                                        # Sideways
+                                        'dx': random.uniform(-5, 5),    
+                                        'size': random.randint(9, 10),
+                                        # Use unique colors
+                                        'color': mineBgColor 
+                                    })
         else:
             # used ai for this, flashes screen and does confetti
             if app.winFlashTimer > 0:
@@ -293,15 +348,49 @@ def redrawAll(app):
             if p['y'] < app.height:
                 drawRect(p['x'], p['y'], p['size'], p['size'], fill=p['color'], align='center')
 
-    if app.gameOver:
-        # Semi-transparent overlay
-        drawRect(0, 0, app.width, app.height, fill='black', opacity=30)
-        drawLabel('GAME OVER', app.width/2, app.height/2, 
-                  size=40, bold=True, fill='white', border='black')
-        drawLabel('Press any key to restart', app.width/2, app.height/2 + 50, 
-                  size=20, fill='white')
+    #Draw menu, used some ai here
+    drawRoundedRect(app.menuX, app.menuY, app.menuW, app.menuH, radius=6, fill='white', border='white', borderWidth=1)
     
+    drawLabel(app.currentDifficulty, app.menuX + app.checkmarkIndentX, app.menuY + app.menuH/2, 
+              fill='black', bold=True, size=16, font='arial', align='left')
 
+    #draw arrow image
+    arrowSize = 12
+    drawImage(app.downArrow, app.menuX + app.menuW - 20, app.menuY + app.menuH/2, 
+              align='center', width=arrowSize, height=arrowSize)
+    
+    # draw options if open
+    if app.isDropdownOpen:
+        # shift dropdowns right
+        menuOptX = app.menuX + app.menuShiftX
+        
+        shadowOffset = 3
+        numItems = len(app.difficulties)
+        
+        drawRoundedRect(menuOptX + shadowOffset, app.menuY + app.menuH + shadowOffset, 
+                        app.menuW, app.menuH * numItems, radius=6, fill='gray')
+        
+        drawRoundedRect(menuOptX, app.menuY + app.menuH, 
+                        app.menuW, app.menuH * numItems, radius=6, fill='white')
+        
+        # Draw each option
+        for i, diffName in enumerate(app.difficulties.keys()):
+            optY = app.menuY + app.menuH + (app.menuH * i)
+            
+            bgColor = 'white'
+            
+            # Change on hover
+            if getattr(app, 'menuHoveredItem', None) == i:
+                bgColor = rgb(235, 235, 235)
+            
+            drawRoundedRect(menuOptX, optY, app.menuW, app.menuH, radius=6, fill=bgColor, border=None)
+            
+            # checkmark on option selected
+            if diffName == app.currentDifficulty:
+                drawImage(app.checkmark, menuOptX + 15, optY + app.menuH/2, align='center', width=20, height=25)
+            
+            drawLabel(diffName, menuOptX + app.checkmarkIndentX, optY + app.menuH/2, 
+                      fill='black', bold=True, size=16, font='arial', align='left')
 def main():
     runApp()
 

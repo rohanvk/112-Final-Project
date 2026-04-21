@@ -92,3 +92,27 @@ def revealCell(app, r, c): # recursive reveal
             for dc in [-1, 0, 1]:
                 revealCell(app, r + dr, c + dc)
 
+def drawRoundedRect(x, y, w, h, radius, fill='black', border=None, borderWidth=1):
+    # Used AI to make this function, draws 4 circles and two rectangles
+    drawRect(x + radius, y, w - 2 * radius, h, fill=fill)
+    drawRect(x, y + radius, w, h - 2 * radius, fill=fill)
+    
+    drawCircle(x + radius, y + radius, radius, fill=fill)
+    drawCircle(x + w - radius, y + radius, radius, fill=fill)
+    drawCircle(x + radius, y + h - radius, radius, fill=fill)
+    drawCircle(x + w - radius, y + h - radius, radius, fill=fill)
+    
+    # Outlines rectangles
+    if border != None:
+        # Edges
+        drawLine(x + radius, y, x + w - radius, y, fill=border, lineWidth=borderWidth) # Top
+        drawLine(x + radius, y + h, x + w - radius, y + h, fill=border, lineWidth=borderWidth) # Bottom
+        drawLine(x, y + radius, x, y + h - radius, fill=border, lineWidth=borderWidth) # Left
+        drawLine(x + w, y + radius, x + w, y + h - radius, fill=border, lineWidth=borderWidth) # Right
+        
+        # Arcs
+        d = radius * 2
+        drawArc(x + w - radius, y + radius, d, d, 0, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Right
+        drawArc(x + radius, y + radius, d, d, 90, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Left
+        drawArc(x + radius, y + h - radius, d, d, 180, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Left
+        drawArc(x + w - radius, y + h - radius, d, d, 270, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Right
