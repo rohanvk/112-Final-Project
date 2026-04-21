@@ -3,21 +3,24 @@ from board import *
 
 def drawTimer(app):
     drawOval(app.width-25, 50, 150, 50, fill='lightblue', align='right')
-    drawLabel(f'Timer: {pythonRound(app.timer, 1)}', app.width-150, 50,align='left', size=20)
+    timer = 0 if app.firstClick else app.timer
+    drawLabel(f'Timer: {pythonRound(timer, 1)}', app.width-150, 50,align='left', size=20)
 
 def drawStatus(app):
-    drawLabel(f'Score: {app.score}', 50, 50, size=20, align='left')
-    drawLabel('Minesweeper', app.width/2, 50, size=30, bold=True)
-    
+    pass
+
 def drawCells(app):
+    cellW = app.boardWidth / app.cols
+    cellH = app.boardHeight / app.rows
+
     for row in range(app.rows):
         for col in range(app.cols):
             cell = app.board[row][col]
-            l, t = getCellLeftTop(app, row, col)
-            w, h = getCellSize(app)
+            l = app.boardLeft + col * cellW
+            t = app.boardTop + row * cellH
             
-            cx = l + w/2
-            cy = t + h/2
+            cx = l + cellW/2
+            cy = t + cellH/2
             
             if cell.revealed:
                 if cell.hasMine:
@@ -27,10 +30,10 @@ def drawCells(app):
                     mineBgColor, mineCircleColor = app.numberColors[colorIndex]
                     
                     # background = light color
-                    drawRect(l, t, w, h, fill=mineBgColor)
+                    drawRect(l, t, cellW, cellH, fill=mineBgColor)
                     
                     # center = dark color
-                    radius = min(w, h) * 0.25
+                    radius = min(cellW, cellH) * 0.25
                     drawCircle(cx, cy, radius, fill=mineCircleColor)
                 else:
                     # dirt checker
@@ -39,12 +42,12 @@ def drawCells(app):
                     else:
                         dirtColor = rgb(215, 184, 153)
                     
-                    drawRect(l, t, w, h, fill=dirtColor)
+                    drawRect(l, t, cellW, cellH, fill=dirtColor)
                     
                     if cell.adjacentMines > 0:
                         # Get color for num
                         numColor = app.textColors[cell.adjacentMines]
-                        drawLabel(cell.adjacentMines, cx, cy, size=w*0.8, bold=True, fill=numColor, font='arial')
+                        drawLabel(cell.adjacentMines, cx, cy, size=cellW*0.8, bold=True, fill=numColor, font='arial')
             else:
                 # grass checker
                 if (row + col) % 2 == 0:
@@ -52,18 +55,19 @@ def drawCells(app):
                 else:
                     baseColor = rgb(162, 209, 73)  # Dark grass
                 
-                # hover color
-                if app.hoveredCell == (row, col):
-                    cellColor = rgb(191, 225, 125) # Hover effect
+                # hover / win flash color
+                isFlashing = getattr(app, 'winFlashTimer', 0) > 0
+                if app.hoveredCell == (row, col) or isFlashing:
+                    cellColor = rgb(191, 225, 125) # Hover / Flash color
                 else:
                     cellColor = baseColor
                 
-                drawRect(l, t, w, h, fill=cellColor)
+                drawRect(l, t, cellW, cellH, fill=cellColor)
                 
                 if cell.flagged:
                     if cell.flagScale > 0:
-                        sw = w * 0.8 * cell.flagScale
-                        sh = h * 0.8 * cell.flagScale
+                        sw = cellW * 0.8 * cell.flagScale
+                        sh = cellH * 0.8 * cell.flagScale
                         drawImage(app.flagImage, cx, cy, align='center',width=sw, height=sh)
 
     # Loop 2 to draw an edge between the borders of the grass and opened cells, ai assisted
@@ -75,24 +79,24 @@ def drawCells(app):
             cell = app.board[row][col]
             
             if cell.revealed:
-                l, t = getCellLeftTop(app, row, col)
-                w, h = getCellSize(app)
+                l = app.boardLeft + col * cellW
+                t = app.boardTop + row * cellH
                 
                 # if top
                 if row > 0 and not app.board[row-1][col].revealed:
-                    drawLine(l, t, l + w, t, fill=edgeColor, lineWidth=edgeThickness)
+                    drawLine(l, t, l + cellW, t, fill=edgeColor, lineWidth=edgeThickness)
                 
                 # if bottom
                 if row < app.rows - 1 and not app.board[row+1][col].revealed:
-                    drawLine(l, t + h, l + w, t + h, fill=edgeColor, lineWidth=edgeThickness)
+                    drawLine(l, t + cellH, l + cellW, t + cellH, fill=edgeColor, lineWidth=edgeThickness)
                 
                 # if left
                 if col > 0 and not app.board[row][col-1].revealed:
-                    drawLine(l, t, l, t + h, fill=edgeColor, lineWidth=edgeThickness)
+                    drawLine(l, t, l, t + cellH, fill=edgeColor, lineWidth=edgeThickness)
                 
                 # if right
                 if col < app.cols - 1 and not app.board[row][col+1].revealed:
-                    drawLine(l + w, t, l + w, t + h, fill=edgeColor, lineWidth=edgeThickness)
+                    drawLine(l + cellW, t, l + cellW, t + cellH, fill=edgeColor, lineWidth=edgeThickness)
 
     # animation loop, used ai for this
     for row in range(app.rows):
@@ -100,47 +104,43 @@ def drawCells(app):
             cell = app.board[row][col]
             
             if cell.isAnimating:
-                l, t = getCellLeftTop(app, row, col)
-                w, h = getCellSize(app)
+                l = app.boardLeft + col * cellW
+                t = app.boardTop + row * cellH
                 
                 # get size
-                animW = w * cell.animScale
-                animH = h * cell.animScale
+                animW = cellW * cell.animScale
+                animH = cellH * cell.animScale
                 
                 # randomly move
-                cx = l + w/2 + cell.animOffsetX
-                cy = t + h/2 + cell.animOffsetY
+                acx = l + cellW/2 + cell.animOffsetX
+                acy = t + cellH/2 + cell.animOffsetY
                 
                 # get new location
-                animL = cx - animW/2
-                animT = cy - animH/2
+                animL = acx - animW/2
+                animT = acy - animH/2
                 
                 # get color
-                if (row + col) % 2 == 0:
-                    grassColor = rgb(170, 215, 81)
-                else: #used ai for this, makes grass flash or checkered if not opened
-
-                    isFlashing = getattr(app, 'winFlashTimer', 0) > 0
-                    if app.hoveredCell == (row, col) or isFlashing:
-                        grassColor = rgb(191, 225, 125) # Flash / Hover effect
-                    elif (row + col) % 2 == 0:
-                        grassColor = rgb(170, 215, 81)  # Light grass
-                    else:
-                        grassColor = rgb(162, 209, 73)  # Dark grass
-                    
-                    drawRect(animL, animT, animW, animH, fill=grassColor)
+                isFlashing = getattr(app, 'winFlashTimer', 0) > 0
+                if app.hoveredCell == (row, col) or isFlashing:
+                    grassColor = rgb(191, 225, 125) # Flash / Hover effect
+                elif (row + col) % 2 == 0:
+                    grassColor = rgb(170, 215, 81)  # Light grass
+                else:
+                    grassColor = rgb(162, 209, 73)  # Dark grass
+                
+                drawRect(animL, animT, animW, animH, fill=grassColor)
 
             if cell.isFlagDespawning: #similar logic for the flags
                 if cell.flagDespawnScale > 0.01: #cmu graphics hates 0
-                    l, t = getCellLeftTop(app, row, col)
-                    w, h = getCellSize(app)
+                    l = app.boardLeft + col * cellW
+                    t = app.boardTop + row * cellH
                     
-                    sw = w * 0.8 * cell.flagDespawnScale
-                    sh = h * 0.8 * cell.flagDespawnScale
-                    cx = l + w/2 + cell.flagDespawnOffsetX
-                    cy = t + h/2 + cell.flagDespawnOffsetY
+                    sw = cellW * 0.8 * cell.flagDespawnScale
+                    sh = cellH * 0.8 * cell.flagDespawnScale
+                    fcx = l + cellW/2 + cell.flagDespawnOffsetX
+                    fcy = t + cellH/2 + cell.flagDespawnOffsetY
                     
-                    drawImage(app.flagImage, cx, cy, align='center', width=sw, height=sh)
+                    drawImage(app.flagImage, fcx, fcy, align='center', width=sw, height=sh)
 
 def drawBoard(app):
     for row in range(app.rows):

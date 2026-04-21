@@ -31,12 +31,18 @@ def placeMines(app, startRow, startCol):
         for dc in [-1, 0, 1]:
             safeZones.append((startRow + dr, startCol + dc))
 
-    # Place the mines
+    # Place mines using random.sample
+    candidates = []
     for row in range(app.rows):
         for col in range(app.cols):
             if (row, col) not in safeZones:
-                if random.random() < app.prob:
-                    app.board[row][col].hasMine = True
+                candidates.append((row, col))
+
+    # Make sure we don't try to place more mines than available cells
+    numMines = min(app.numMines, len(candidates))
+    minePositions = random.sample(candidates, numMines)
+    for (row, col) in minePositions:
+        app.board[row][col].hasMine = True
     
     #Count neighbors, some ai used here for boundary check
     for row in range(app.rows):
@@ -52,8 +58,8 @@ def placeMines(app, startRow, startCol):
                 app.board[row][col].adjacentMines = count
         
 def getCell(app, x, y):
-    if (app.boardLeft <= x <= app.boardLeft + app.boardWidth and
-        app.boardTop <= y <= app.boardTop + app.boardHeight):
+    if (app.boardLeft <= x < app.boardLeft + app.boardWidth and
+        app.boardTop <= y < app.boardTop + app.boardHeight):
         col = int((x - app.boardLeft) / (app.boardWidth / app.cols))
         row = int((y - app.boardTop) / (app.boardHeight / app.rows))
         return (row, col)
