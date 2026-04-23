@@ -2,12 +2,22 @@ from cmu_graphics import *
 from board import *
 
 def drawTimer(app):
-    drawOval(app.width-25, 50, 150, 50, fill='lightblue', align='right')
     timer = 0 if app.firstClick else app.timer
-    drawLabel(f'Timer: {pythonRound(timer, 1)}', app.width-150, 50,align='left', size=20)
+    drawLabel(f'{pythonRound(timer, 1)}', app.width/2 + 85, 45 ,align='left', size=24, fill ='white')
+    drawImage(app.timerimage, app.width/2 + 50, 45, align = 'center')
 
 def drawStatus(app):
-    pass
+    flagsPlaced = 0
+    for row in range(app.rows):
+        for col in range(app.cols):
+            if app.board[row][col].flagged:
+                flagsPlaced += 1
+    
+    minesLeft = app.numMines - flagsPlaced
+    
+    # Display the mines left
+    drawLabel(minesLeft, app.width/2, 45, size=24, align='right', fill='white')
+    drawImage(app.flagImage, app.width/2 - 55, 45, align='center', width=40,height=40 )
 
 def drawCells(app):
     cellW = app.boardWidth / app.cols
@@ -148,12 +158,6 @@ def drawBoard(app):
             color = 'lightGray'
             drawCell(app, row, col,color)
 
-def drawBoardBorder(app):
-  # draw the board outline (with double-thickness):
-  drawRect(app.boardLeft, app.boardTop, app.boardWidth, app.boardHeight,
-           fill=None, border='black',
-           borderWidth=2*app.cellBorderWidth)
-
 def drawCell(app, row, col, color):
     cellLeft, cellTop = getCellLeftTop(app, row, col)
     cellWidth, cellHeight = getCellSize(app)
@@ -178,3 +182,152 @@ def resizeBoard(app, numRows, numCols, boardSize):
     app.cols = numCols
     app.boardLeft, app.boardWidth, app.boardHeight = boardSize
     app.board = [[Cell(row, col) for col in range (app.cols)] for row in range(app.rows)]
+
+def drawRoundedRect(x, y, w, h, radius, fill='black', border=None, borderWidth=1):
+    # Used AI to make this function, draws 4 circles and two rectangles
+    drawRect(x + radius, y, w - 2 * radius, h, fill=fill)
+    drawRect(x, y + radius, w, h - 2 * radius, fill=fill)
+    
+    drawCircle(x + radius, y + radius, radius, fill=fill)
+    drawCircle(x + w - radius, y + radius, radius, fill=fill)
+    drawCircle(x + radius, y + h - radius, radius, fill=fill)
+    drawCircle(x + w - radius, y + h - radius, radius, fill=fill)
+    
+    # Outlines rectangles
+    if border != None:
+        # Edges
+        drawLine(x + radius, y, x + w - radius, y, fill=border, lineWidth=borderWidth) # Top
+        drawLine(x + radius, y + h, x + w - radius, y + h, fill=border, lineWidth=borderWidth) # Bottom
+        drawLine(x, y + radius, x, y + h - radius, fill=border, lineWidth=borderWidth) # Left
+        drawLine(x + w, y + radius, x + w, y + h - radius, fill=border, lineWidth=borderWidth) # Right
+        
+        # Arcs
+        d = radius * 2
+        drawArc(x + w - radius, y + radius, d, d, 0, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Right
+        drawArc(x + radius, y + radius, d, d, 90, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Left
+        drawArc(x + radius, y + h - radius, d, d, 180, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Left
+        drawArc(x + w - radius, y + h - radius, d, d, 270, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Right
+
+def getMenuButtonWidth(app):
+    #dynamic button sizing in the menu
+    return 10 + len(app.currentDifficulty) * 10 + 30
+
+def drawMenu(app):
+    #Draw menu, used some ai here
+    btnW = getMenuButtonWidth(app)
+    drawRoundedRect(app.menuX, app.menuY, btnW, app.menuH, radius=6, fill='white', border='white', borderWidth=1)
+    
+    drawLabel(app.currentDifficulty, app.menuX + 10, app.menuY + app.menuH/2, 
+              fill='black', bold=True, size=16, font='arial', align='left')
+
+    #draw arrow image
+    arrowSize = 12
+    drawImage(app.downArrow, app.menuX + btnW - 20, app.menuY + app.menuH/2, 
+              align='center', width=arrowSize, height=arrowSize)
+    
+    # draw options if open
+    if app.isDropdownOpen:
+        # shift dropdowns right
+        menuOptX = app.menuX + app.menuShiftX
+        
+        shadowOffset = 3
+        numItems = len(app.difficulties)
+        
+        drawRoundedRect(menuOptX + shadowOffset, app.menuY + app.menuH + shadowOffset, 
+                        app.menuW, app.menuH * numItems, radius=6, fill='gray')
+        
+        drawRoundedRect(menuOptX, app.menuY + app.menuH, 
+                        app.menuW, app.menuH * numItems, radius=6, fill='white')
+        
+        # Draw each option
+        for i, diffName in enumerate(app.difficulties.keys()):
+            optY = app.menuY + app.menuH + (app.menuH * i)
+            
+            bgColor = 'white'
+            
+            # Change on hover
+            if getattr(app, 'menuHoveredItem', None) == i:
+                bgColor = rgb(235, 235, 235)
+            
+            drawRoundedRect(menuOptX, optY, app.menuW, app.menuH, radius=6, fill=bgColor, border=None)
+            
+            # checkmark on option selected
+            if diffName == app.currentDifficulty:
+                drawImage(app.checkmark, menuOptX + 15, optY + app.menuH/2, align='center', width=20, height=25)
+            
+            drawLabel(diffName, menuOptX + app.checkmarkIndentX, optY + app.menuH/2, 
+                      fill='black', bold=True, size=16, font='arial', align='left')
+
+def menuLogic(app, mouseX, mouseY):
+    #used AI to help with this (dropdown menu)
+    menuOptX = app.menuX + app.menuShiftX
+    # Shift menu over
+    menuOptTop = app.menuY + app.menuH
+    menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
+    
+    # Clicked option?
+    if app.isDropdownOpen and menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:        
+        itemIdx = (mouseY - menuOptTop) // app.menuH       
+        for i, diffName in enumerate(app.difficulties.keys()):
+            if i == itemIdx:
+                app.currentDifficulty = diffName
+                app.rows, app.cols, app.numMines = app.difficulties[diffName]
+                restartApp(app)
+        return True
+    app.isDropdownOpen = False 
+    # Clicked menu?
+    btnW = getMenuButtonWidth(app)
+    if app.menuX <= mouseX <= app.menuX + btnW and app.menuY <= mouseY <= app.menuY + app.menuH:
+        app.isDropdownOpen = True
+        return True
+
+def startOverButton(app, mouseX, mouseY):
+    if app.gameOver:
+        if app.isWin or app.endflag:
+            tryScale = min((app.width * 0.6) / 1796, (app.height * 0.15) / 396)
+            tryW, tryH = 1796 * tryScale, 396 * tryScale
+            cx, cy = app.width / 2, app.height / 1.5
+            if (cx - tryW/2 <= mouseX <= cx + tryW/2) and (cy - tryH/2 <= mouseY <= cy + tryH/2):
+                restartApp(app)
+                return True
+        if not app.isWin:
+            if not app.endflag and app.loseMusic is not None:
+                app.loseMusic.play(loop=True)
+            app.endflag = True
+        return True
+
+
+def drawGameScreens(app):
+    if not app.gameOver: return
+    
+    # Calculate scale for images (used ai for this). 
+    # Hard coded: 1323x991 (aim for max 70% width or 55% height)
+    wlScale = min((app.width * 0.7) / 1323, (app.height * 0.55) / 991)
+    wlW, wlH = 1323 * wlScale, 991 * wlScale
+    
+    # Try Again button hard code: 1796x396
+    tryScale = min((app.width * 0.6) / 1796, (app.height * 0.15) / 396)
+    tryW, tryH = 1796 * tryScale, 396 * tryScale
+    
+    # draw win screen
+    if checkWin(app) or app.forcedWin:
+        drawRect(0,0,app.width,app.height,fill='slategray',opacity=50)
+        drawImage(app.winimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
+        drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
+
+    #draw lose screen
+    elif app.endflag:
+        drawRect(0,0,app.width,app.height,fill='slategray',opacity=50)
+        drawImage(app.loseimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
+        drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
+
+    # draw counters over the images if win or lose screen is shown
+    if checkWin(app) or app.endflag or app.forcedWin:
+        bestList = app.bestScores[app.currentDifficulty]
+        bestText = str(bestList[0]) if len(bestList) > 0 else "-"
+        currText = str(app.timer)
+        
+        # Left side: current time
+        drawLabel(currText, app.width/2 - wlW*0.25, app.height/3 + wlH*0.05, size=32, bold=True, fill='white', align='left')
+        # Right side: best time 
+        drawLabel(bestText, app.width/2 + wlW*0.20, app.height/3 + wlH*0.05, size=32, bold=True, fill='white', align='left')

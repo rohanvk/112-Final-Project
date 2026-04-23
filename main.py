@@ -1,13 +1,17 @@
 #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
+#All images and audio from the Google Minesweeper game unless otherwise cited
+#Dev commands: p to pause, w to win, e to lose
 
 from cmu_graphics import *
-from PIL import Image as PILImage
+from PIL import Image as PILImage #image optimization
 import time #need because otherwise timer tracks framerate
 from board import *
 from ui import *
 from solver import *
+from animations import *
 
 def onAppStart(app):
+    app.isLoaded = False
     app.width = app.height = 750
     app.stepsPerSecond = 20
     app.rows = 14
@@ -19,21 +23,39 @@ def onAppStart(app):
     app.cellBorderWidth = 0.5
     app.paused = False
     app.board = [[Cell(row, col) for col in range (app.cols)] for row in range(app.rows)]
+
     app.score = 0
     app.gameOver = False
+    app.isWin = False
+    app.forcedWin = False
     app.numMines = 40
     app.firstClick = True
     app.startTime = time.time()
     app.timer = 0
     app.hoveredCell = None
+
     app.confetti = []
-    app.bestScores = []
+    app.bestScores = {"Easy": [], "Medium": [], "Hard": []}
     app.winFlashTimer = 0
     app.isDropdownOpen = False
     app.menuHoveredItem = None
     app.currentDifficulty = "Medium"
     app.menuShiftX = 0       
     app.checkmarkIndentX = 30
+    app.endflag = False
+    app.winnerMusicTimer = 0
+
+    # Audio initialization
+    app.bigDigSound = Sound('audio/game_audio BIG_DIG.mp3')
+    app.mineSounds = [s for s in [Sound(f'audio/game_audio MINE_{i}.mp3') for i in range(1, 6)] if s is not None]
+    app.digSounds = [s for s in [Sound(f'audio/game_audio DIG_REVEAL_{i}.mp3') for i in range(1, 9)] if s is not None]
+    app.soundsPlayedThisStep = 0
+    app.plantSound = Sound('audio/game_audio PLANT_FLAG.mp3')
+    app.unplantSound = Sound('audio/game_audio UNPLANT_FLAG.mp3')
+    app.loseMusic = Sound('audio/music_audio LOSE_MUSIC.mp3')
+    app.winHarp = Sound('audio/music_audio WIN_WATER_HARP.mp3')
+    app.winMusic = Sound('audio/music_audio WINNER_MUSIC.mp3')
+
     app.difficulties = {
         "Easy": (8, 10, 10),
         "Medium": (14, 18, 40),
@@ -42,7 +64,7 @@ def onAppStart(app):
     
     # Menu location and size
     app.menuX = 20
-    app.menuY = 15
+    app.menuY = 25
     app.menuW = 100
     app.menuH = 40
 
@@ -78,10 +100,16 @@ def onAppStart(app):
     app.downArrow = CMUImage(rawArrow)
     rawCheck = PILImage.open('images/checkmark.png')
     app.checkmark = CMUImage(rawCheck)
-
-def getMenuButtonWidth(app):
-    #dynamic button sizing in the menu
-    return 10 + len(app.currentDifficulty) * 10 + 30
+    rawTimer = PILImage.open('images/timerimage.png')
+    resizedTimer = rawTimer.resize((44, 54))
+    app.timerimage = CMUImage(resizedTimer)
+    rawTry = PILImage.open('images/Try again.png')
+    app.tryagain = CMUImage(rawTry)
+    rawWin = PILImage.open('images/Win screen.png')
+    app.winimage = CMUImage(rawWin)
+    rawLose = PILImage.open('images/Lose screen.png')
+    app.loseimage = CMUImage(rawLose)
+    app.isLoaded = True
 
 def restartApp(app):
     app.paused = False
@@ -94,9 +122,33 @@ def restartApp(app):
     app.confetti = []
     app.hoveredCell = None
     app.winFlashTimer = 0
+    app.shakeTimer = 0
     app.isDropdownOpen = False
     app.menuHoveredItem = None
+    app.forcedWin = False
+    app.endflag = False
+    app.winnerMusicTimer = 0
 
+    # Stop all playing sounds safely
+    for attr in ['loseMusic', 'winHarp', 'winMusic']:
+        try:
+            sound = getattr(app, attr, None)
+            if sound is not None:
+                sound.pause()
+        except:
+            # If CMU Sound system fails or attribute is missing, just continue
+            pass
+
+def checkMenuHover(app, mouseX, mouseY):
+    if getattr(app, 'isDropdownOpen', False):
+        menuOptX = app.menuX + app.menuShiftX
+        menuOptTop = app.menuY + app.menuH
+        menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
+        
+        if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
+            app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
+        else:
+            app.menuHoveredItem = None
 
 def onMouseMove(app, mouseX, mouseY):
     if app.gameOver:
@@ -109,314 +161,117 @@ def onMouseMove(app, mouseX, mouseY):
         app.hoveredCell = coords
 
     #used some ai to get the hover for the menu
-    if getattr(app, 'isDropdownOpen', False):
-            menuOptX = app.menuX + app.menuShiftX
-            menuOptTop = app.menuY + app.menuH
-            menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
-            
-            if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
-                app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
-            else:
-                app.menuHoveredItem = None
+    checkMenuHover(app, mouseX, mouseY)
 
 def onMousePress(app, mouseX, mouseY, button):
-    #used AI to help with this (dropdown menu)
-    menuOptX = app.menuX + app.menuShiftX
-    # Shift menu over
-    menuOptTop = app.menuY + app.menuH
-    menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
-    
-    # Clicked option?
-    if app.isDropdownOpen and menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:        
-        itemIdx = (mouseY - menuOptTop) // app.menuH       
-        for i, diffName in enumerate(app.difficulties.keys()):
-            if i == itemIdx:
-                app.currentDifficulty = diffName
-                app.rows, app.cols, app.numMines = app.difficulties[diffName]
-                restartApp(app)
-        return
-    app.isDropdownOpen = False 
-    # Clicked menu?
-    btnW = getMenuButtonWidth(app)
-    if app.menuX <= mouseX <= app.menuX + btnW and app.menuY <= mouseY <= app.menuY + app.menuH:
-        app.isDropdownOpen = True
-        return
-    if app.gameOver: return
+    if not menuLogic(app,mouseX,mouseY) and not startOverButton(app,mouseX,mouseY):
+        coords = getCell(app, mouseX, mouseY)
+        if coords is None: return
+        row, col = coords
+        cell = app.board[row][col]
 
-    coords = getCell(app, mouseX, mouseY)
-    if coords is None: return
-    row, col = coords
-    cell = app.board[row][col]
+        # Right Click (flag)
+        if button == 2:
+            if not cell.revealed:
+                if cell.flagged: # remove flag
+                    removeFlag(cell)
+                    app.unplantSound.play()
 
-    # Right Click
-    if button == 2:
-        if not cell.revealed:
-            if cell.flagged: # remove flag
-                cell.isFlagDespawning = True
-                cell.flagDespawnScale = 1.0
-                cell.flagDespawnOffsetX = 0
-                cell.flagDespawnOffsetY = 0
-            #pop up and then out
-                cell.flagDespawnDy = random.randint(-12, -8) 
-                cell.flagDespawnDx = random.randint(-4, 4)
+                cell.flagged = not cell.flagged
 
-            cell.flagged = not cell.flagged
+                if cell.flagged: #add flag
+                    cell.isFlagAnimating = True
+                    cell.flagScale = 0.1
+                    app.plantSound.play()
 
-            if cell.flagged: #add flag
-                cell.isFlagAnimating = True
-                cell.flagScale = 0.1
-
-    # Left Click
-    elif button == 0:
-        if cell.flagged: return 
-        
-        if app.firstClick:
-            placeMines(app, row, col)
-            app.firstClick = False
-            app.startTime = time.time() - 1
-            app.timer = 1
-
-        if cell.hasMine:
-            app.gameOver = True
-            app.isWin = False
-
-            cell.revealed = True
-
-            for r in range(app.rows):
-                for c in range(app.cols):
-                    checkCell = app.board[r][c]
-                    if r-row == 0 and c - col == 0:
-                        checkCell.waveDelay = 1
-                    elif (checkCell.hasMine or checkCell.flagged) and not checkCell.revealed:
-                        dist = ((r - row)**2 + (c - col)**2)**0.5
-                        checkCell.waveDelay = int(dist * 12)
-
-        else:
-            revealCell(app, row,col)
+        # Left Click (open)
+        elif button == 0:
+            if cell.flagged: return 
             
-            if checkWin(app):
-                app.gameOver = True
-                app.isWin = True
-                app.winFlashTimer = 10
-                
-                # Save score
-                app.bestScores.append(app.timer)
-                app.bestScores.sort()
-                
-                # Pop all flags and generate confetti
-                app.confetti = []
-                confettiColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
-                
-                for r in range(app.rows):
-                    for c in range(app.cols):
-                        checkCell = app.board[r][c]
-                        if checkCell.flagged:
-                            checkCell.flagged = False
-                            checkCell.isFlagDespawning = True
-                            checkCell.flagDespawnScale = 1.0
-                            checkCell.flagDespawnOffsetX = 0
-                            checkCell.flagDespawnOffsetY = 0
-                            checkCell.flagDespawnDy = random.randint(-12, -8)
-                            checkCell.flagDespawnDx = random.randint(-4, 4)
-                            
-                for i in range(150):
-                    app.confetti.append({
-                        'x': random.randint(0, app.width),
-                        'y': random.randint(-300, -50),
-                        'dx': random.randint(-6, 6),
-                        'dy': random.randint(2, 12),
-                        'size': random.randint(6, 12),
-                        'color': random.choice(confettiColors),
-                        'age': 0,
-                        'opacity': 100
-                    })        
+            if app.firstClick:
+                placeMines(app, row, col)
+                app.firstClick = False
+                app.startTime = time.time() - 1
+                app.timer = 1
+
+            if cell.hasMine:
+                startGameOver(app, cell, coords)
+            else:
+                wonGame(app, coords)
 
 def onKeyPress(app, key):
-    if app.gameOver:
+    if key == 'space':
         restartApp(app)
-    else:
+        return
+        
+    if not app.gameOver:
         if key == 'p': 
             app.paused = not app.paused
-        elif key == 'r': 
-            restartApp(app)
+        if key == 'e':
+            triggerLose(app)
+        if key == 'w':
+            triggerWin(app)
 
 def onStep(app):
+    if not getattr(app, 'isLoaded', False): return
+    app.soundsPlayedThisStep = 0
+
+    if not app.gameOver:
+        # Guarantee music stops when not in game over
+        try:
+            if getattr(app, 'loseMusic', None): app.loseMusic.pause()
+            if getattr(app, 'winMusic', None): app.winMusic.pause()
+            if getattr(app, 'winHarp', None): app.winHarp.pause()
+        except:
+            pass
+
     if app.boardWidth != app.width or app.boardHeight != app.height - 90:
         app.boardWidth = app.width
         app.boardHeight = app.height - 90
+    shakeScreen(app)
     if not app.paused and not app.gameOver:
         takeStep(app)
-        #animation!
+    
+    #animations!
     for row in range(app.rows):
         for col in range(app.cols):
             cell = app.board[row][col]
-            
-            # if cell animating, change animation
-            if cell.isAnimating:
-                cell.animScale -= 0.11     # Shrink by 10% every frame
-                cell.animOffsetX += cell.animDx # Move X
-                cell.animOffsetY += cell.animDy # Move Y
-                
-                # stop animation
-                if cell.animScale <= 0:
-                    cell.animScale = 0
-                    cell.isAnimating = False
-            if cell.isFlagAnimating:
-                cell.flagScale += 0.4  # Increase size by 20% per frame
-                if cell.flagScale >= 1.0:
-                    cell.flagScale = 1.0
-                    cell.isFlagAnimating = False
-
-            if cell.isFlagDespawning:
-                gravity = 1.2
-                cell.flagDespawnDy += gravity
-                cell.flagDespawnOffsetX += cell.flagDespawnDx
-                cell.flagDespawnOffsetY += cell.flagDespawnDy
-
-                if cell.flagDespawnDy > 0:
-                    cell.flagDespawnScale -= 0.1
-                if cell.flagDespawnScale <= 0:
-                    cell.flagDespawnScale = 0
-                    cell.isFlagDespawning = False
+            stepCellAnimations(cell)
+            stepFlagAnimations(cell)
+            stepFlagDespawn(cell)
     if app.gameOver:
         if not app.isWin:
             # lose = mines explode
-            for r in range(app.rows):
-                for c in range(app.cols):
-                    cell = app.board[r][c]
-                    if (cell.hasMine or cell.flagged) and cell.waveDelay > 0:
-                        cell.waveDelay -= 1
-                        if cell.waveDelay <= 0:
-                            if cell.flagged:
-                                cell.flagged = False
-                                cell.isFlagDespawning = True
-                                cell.flagDespawnScale = 1.0
-                                cell.flagDespawnOffsetX = 0
-                                cell.flagDespawnOffsetY = 0
-                                cell.flagDespawnDy = random.uniform(-18, -10)
-                                cell.flagDespawnDx = random.uniform(-10, 10)
-                            if cell.hasMine:
-                                cell.revealed = True
-                                cell.isAnimating = True
-                                cell.animScale = 1.0
-                                cell.animOffsetX = 0
-                                cell.animOffsetY = 0
-                                cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
-                                cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
-
-                                # get unique color
-                                colorIndex = (r * 11 + c * 17) % 8 + 1
-                                mineBgColor, _ = app.numberColors[colorIndex]
-                                # get cell center
-                                l, t = getCellLeftTop(app, r, c)
-                                w, h = getCellSize(app)
-                                cx, cy = l + w/2, t + h/2
-                                if not hasattr(app, 'confetti'): app.confetti = [] # make sure we have app.confetti
-                                # add 8 particles for loss
-                                for _ in range(8):
-                                    app.confetti.append({
-                                        'x': cx,
-                                        'y': cy,
-                                        # Go UP (Dy is negative)
-                                        'dy': random.uniform(-4, -3), 
-                                        # Sideways
-                                        'dx': random.uniform(-5, 5),    
-                                        'size': random.randint(9, 10),
-                                        # Use unique colors
-                                        'color': mineBgColor,
-                                        'age': 0,
-                                        'opacity': 100
-                                    })
+            lossAnimation(app)
         else:
-            # used ai for this, flashes screen and does confetti
             if app.winFlashTimer > 0:
                 app.winFlashTimer -= 1
-                
-            for p in app.confetti:
-                p['dy'] += 0.2
-                p['x'] += p['dx']
-                p['y'] += p['dy']
-                if p['dx'] > 0: p['dx'] -= 0.1
-                elif p['dx'] < 0: p['dx'] += 0.1
-
-        for p in getattr(app, 'confetti', []): #used ai for this part to get confetti during end
-            p['dy'] += 0.2              # Gravity
-            # Flutter effect
-            if p['dx'] > 0: p['dx'] -= 0.05
-            elif p['dx'] < 0: p['dx'] += 0.05
+            stepWinConfetti(app)
             
-            # Move across screen
-            p['x'] += p['dx']
-            p['y'] += p['dy']
+            # Sequential win music transition
+            if app.winnerMusicTimer > 0:
+                app.winnerMusicTimer -= 1
+                if app.winnerMusicTimer == 0:
+                    if app.winMusic is not None:
+                        app.winMusic.play(loop=True)
 
-            # fade out after 40 frames (2 seconds)
-            p['age'] = p.get('age', 0) + 1
-            if p['age'] > 40:
-                p['opacity'] = max(0, p.get('opacity', 100) - 5)
-
-        # Remove if faded
-        app.confetti = [p for p in app.confetti if p.get('opacity', 100) > 0]
+        stepConfetti(app)
 
 def takeStep(app):
     app.timer = int(time.time() - app.startTime)
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill=rgb(74, 117, 44)) # Background
-    drawRect(app.boardLeft, app.boardTop, app.boardWidth, app.boardHeight, fill='lightGray') # Board background
-    drawStatus(app)
-    drawBoardBorder(app)
+    if app.boardHeight > 0:
+        drawRect(app.boardLeft, app.boardTop, app.boardWidth, app.boardHeight, fill='lightGray') # Board background
+        drawCells(app)
+
     drawTimer(app)
-    drawCells(app)
-    if app.gameOver:
-        for p in app.confetti:
-            # Only draw it if it's on the screen and visible
-            if p['y'] < app.height and p.get('opacity', 100) > 0:
-                drawRect(p['x'], p['y'], p['size'], p['size'], fill=p['color'], align='center', opacity=p.get('opacity', 100))
+    drawStatus(app)
+    drawMenu(app)
+    drawConfetti(app)
+    drawGameScreens(app)
 
-    #Draw menu, used some ai here
-    btnW = getMenuButtonWidth(app)
-    drawRoundedRect(app.menuX, app.menuY, btnW, app.menuH, radius=6, fill='white', border='white', borderWidth=1)
-    
-    drawLabel(app.currentDifficulty, app.menuX + 10, app.menuY + app.menuH/2, 
-              fill='black', bold=True, size=16, font='arial', align='left')
-
-    #draw arrow image
-    arrowSize = 12
-    drawImage(app.downArrow, app.menuX + btnW - 20, app.menuY + app.menuH/2, 
-              align='center', width=arrowSize, height=arrowSize)
-    
-    # draw options if open
-    if app.isDropdownOpen:
-        # shift dropdowns right
-        menuOptX = app.menuX + app.menuShiftX
-        
-        shadowOffset = 3
-        numItems = len(app.difficulties)
-        
-        drawRoundedRect(menuOptX + shadowOffset, app.menuY + app.menuH + shadowOffset, 
-                        app.menuW, app.menuH * numItems, radius=6, fill='gray')
-        
-        drawRoundedRect(menuOptX, app.menuY + app.menuH, 
-                        app.menuW, app.menuH * numItems, radius=6, fill='white')
-        
-        # Draw each option
-        for i, diffName in enumerate(app.difficulties.keys()):
-            optY = app.menuY + app.menuH + (app.menuH * i)
-            
-            bgColor = 'white'
-            
-            # Change on hover
-            if getattr(app, 'menuHoveredItem', None) == i:
-                bgColor = rgb(235, 235, 235)
-            
-            drawRoundedRect(menuOptX, optY, app.menuW, app.menuH, radius=6, fill=bgColor, border=None)
-            
-            # checkmark on option selected
-            if diffName == app.currentDifficulty:
-                drawImage(app.checkmark, menuOptX + 15, optY + app.menuH/2, align='center', width=20, height=25)
-            
-            drawLabel(diffName, menuOptX + app.checkmarkIndentX, optY + app.menuH/2, 
-                      fill='black', bold=True, size=16, font='arial', align='left')
 def main():
     runApp()
 

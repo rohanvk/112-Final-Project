@@ -1,5 +1,6 @@
 from cmu_graphics import *
 import random
+import time
 
 class Cell:
     def __init__(self, row, col):
@@ -8,7 +9,9 @@ class Cell:
         self.revealed = False
         self.flagged = False
         self.adjacentMines = 0
-        self.isAnimating = False #animation data
+        
+        #animation data
+        self.isAnimating = False 
         self.animScale = 1.0     
         self.animDx = 0         
         self.animDy = 0         
@@ -22,7 +25,24 @@ class Cell:
         self.flagDespawnOffsetY = 0
         self.flagDespawnDx = 0
         self.flagDespawnDy = 0
-        self.waveDelay = 0
+        self.waveDelay = -1
+
+def restartApp(app):
+    app.paused = False
+    app.board = [[Cell(row, col) for col in range (app.cols)] for row in range(app.rows)]
+    app.gameOver = False
+    app.isWin = False
+    app.firstClick = True
+    app.timer = 0
+    app.startTime = time.time()
+    app.confetti = []
+    app.hoveredCell = None
+    app.winFlashTimer = 0
+    app.shakeTimer = 0
+    app.isDropdownOpen = False
+    app.menuHoveredItem = None
+    app.forcedWin = False
+
 
 def placeMines(app, startRow, startCol):
     #Safe zone (the clicked cell and its 8 neighbors) some ai used here for planning
@@ -81,9 +101,9 @@ def checkWin(app):
     return True
 
 def revealCell(app, r, c): # recursive reveal
-    if not (0 <= r < app.rows and 0 <= c < app.cols): return
+    if not (0 <= r < app.rows and 0 <= c < app.cols): return 0
     cell = app.board[r][c]
-    if cell.revealed: return
+    if cell.revealed: return 0
 
     cell.revealed = True
     cell.isAnimating = True
@@ -93,32 +113,34 @@ def revealCell(app, r, c): # recursive reveal
     cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
     cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
 
+    count = 1
     if cell.adjacentMines == 0:
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
-                revealCell(app, r + dr, c + dc)
+                count += revealCell(app, r + dr, c + dc)
+    return count
 
-def drawRoundedRect(x, y, w, h, radius, fill='black', border=None, borderWidth=1):
-    # Used AI to make this function, draws 4 circles and two rectangles
-    drawRect(x + radius, y, w - 2 * radius, h, fill=fill)
-    drawRect(x, y + radius, w, h - 2 * radius, fill=fill)
-    
-    drawCircle(x + radius, y + radius, radius, fill=fill)
-    drawCircle(x + w - radius, y + radius, radius, fill=fill)
-    drawCircle(x + radius, y + h - radius, radius, fill=fill)
-    drawCircle(x + w - radius, y + h - radius, radius, fill=fill)
-    
-    # Outlines rectangles
-    if border != None:
-        # Edges
-        drawLine(x + radius, y, x + w - radius, y, fill=border, lineWidth=borderWidth) # Top
-        drawLine(x + radius, y + h, x + w - radius, y + h, fill=border, lineWidth=borderWidth) # Bottom
-        drawLine(x, y + radius, x, y + h - radius, fill=border, lineWidth=borderWidth) # Left
-        drawLine(x + w, y + radius, x + w, y + h - radius, fill=border, lineWidth=borderWidth) # Right
-        
-        # Arcs
-        d = radius * 2
-        drawArc(x + w - radius, y + radius, d, d, 0, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Right
-        drawArc(x + radius, y + radius, d, d, 90, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Left
-        drawArc(x + radius, y + h - radius, d, d, 180, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Left
-        drawArc(x + w - radius, y + h - radius, d, d, 270, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Right
+def startGameOver(app, cell, coords):
+    app.gameOver = True
+    app.isWin = False
+    app.shakeTimer = 8
+    cell.revealed = True
+    row, col = coords
+
+    for r in range(app.rows):
+        for c in range(app.cols):
+            checkCell = app.board[r][c]
+            if r-row == 0 and c - col == 0:
+                checkCell.waveDelay = 1
+            elif (checkCell.hasMine or checkCell.flagged) and not checkCell.revealed:
+                dist = ((r - row)**2 + (c - col)**2)**0.5
+                checkCell.waveDelay = int(dist * 12)
+
+def shakeScreen(app):
+    if getattr(app, 'shakeTimer', 0) > 0:
+        app.shakeTimer -= 1
+        app.boardLeft = random.randint(-3, 3)
+        app.boardTop = 90 + random.randint(-3, 3)
+    else:
+        app.boardLeft = 0
+        app.boardTop = 90
