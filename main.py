@@ -96,21 +96,21 @@ def onAppStart(app):
 
     # Audio
     try:
-        rawAudio = PILImage.open('images/Audio.png')
+        rawAudio = PILImage.open(get_path('images/Audio.png'))
         resizedAudio = rawAudio.resize((30, 30))
         app.audioImage = CMUImage(resizedAudio)
     except:
         app.audioImage = None
 
-    app.bigDigSound = Sound('audio/game_audio BIG_DIG.mp3')
-    app.mineSounds = [s for s in [Sound(f'audio/game_audio MINE_{i}.mp3') for i in range(1, 6)] if s is not None]
-    app.digSounds = [s for s in [Sound(f'audio/game_audio DIG_REVEAL_{i}.mp3') for i in range(1, 9)] if s is not None]
+    app.bigDigSound = Sound(get_path('audio/game_audio BIG_DIG.mp3'))
+    app.mineSounds = [s for s in [Sound(get_path(f'audio/game_audio MINE_{i}.mp3')) for i in range(1, 6)] if s is not None]
+    app.digSounds = [s for s in [Sound(get_path(f'audio/game_audio DIG_REVEAL_{i}.mp3')) for i in range(1, 9)] if s is not None]
     app.soundsPlayedThisStep = 0
-    app.plantSound = Sound('audio/game_audio PLANT_FLAG.mp3')
-    app.unplantSound = Sound('audio/game_audio UNPLANT_FLAG.mp3')
-    app.loseMusic = Sound('audio/music_audio LOSE_MUSIC.mp3')
-    app.winHarp = Sound('audio/music_audio WIN_WATER_HARP.mp3')
-    app.winMusic = Sound('audio/music_audio WINNER_MUSIC.mp3')
+    app.plantSound = Sound(get_path('audio/game_audio PLANT_FLAG.mp3'))
+    app.unplantSound = Sound(get_path('audio/game_audio UNPLANT_FLAG.mp3'))
+    app.loseMusic = Sound(get_path('audio/music_audio LOSE_MUSIC.mp3'))
+    app.winHarp = Sound(get_path('audio/music_audio WIN_WATER_HARP.mp3'))
+    app.winMusic = Sound(get_path('audio/music_audio WINNER_MUSIC.mp3'))
 
     app.difficulties = DIFFICULTIES
     
@@ -127,27 +127,42 @@ def onAppStart(app):
     imageWidth = 60
     imageHeight = 60
         
-    rawFlag = PILImage.open('images/flag.png')
+    rawFlag = PILImage.open(get_path('images/flag.png'))
     resizedFlag = rawFlag.resize((imageWidth, imageHeight))
     app.flagImage = CMUImage(resizedFlag)
-    rawArrow = PILImage.open('images/downArrow.png')
+    rawArrow = PILImage.open(get_path('images/downArrow.png'))
     app.downArrow = CMUImage(rawArrow)
-    rawCheck = PILImage.open('images/checkmark.png')
+    rawCheck = PILImage.open(get_path('images/checkmark.png'))
     app.checkmark = CMUImage(rawCheck)
-    rawTimer = PILImage.open('images/timerimage.png')
+    rawTimer = PILImage.open(get_path('images/timerimage.png'))
     resizedTimer = rawTimer.resize((44, 54))
     app.timerimage = CMUImage(resizedTimer)
-    rawTry = PILImage.open('images/Try again.png')
+    rawTry = PILImage.open(get_path('images/Try again.png'))
     app.tryagain = CMUImage(rawTry)
-    rawWin = PILImage.open('images/Win screen.png')
+    rawWin = PILImage.open(get_path('images/Win screen.png'))
     app.winimage = CMUImage(rawWin)
-    rawLose = PILImage.open('images/Lose screen.png')
+    rawLose = PILImage.open(get_path('images/Lose screen.png'))
     app.loseimage = CMUImage(rawLose)
-    rawOpening = PILImage.open('images/Minesweeper opening page.png')
+    rawOpening = PILImage.open(get_path('images/Minesweeper opening page.png'))
     app.openingImage = CMUImage(rawOpening)
     app.isLoaded = True
 
 def main():
     runAppWithScreens(initialScreen='start')
+
+
+
+#Ignore this function, it is for the EXE version of my code
+import sys
+import os
+
+def get_path(relative_path):
+    """ Get the absolute path to a resource, works for dev and for PyInstaller EXE """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 main()
