@@ -30,16 +30,23 @@ A fully-featured Minesweeper clone built with CMU Graphics for the 15-112 Final 
 
 ## Project Structure
 
-```
-├── main.py            # App entry point, screen routing, game loop
-├── board.py           # Cell class, board generation, mine placement
-├── ui.py              # All drawing functions, menus, game-over screens
-├── button.py          # Reusable Button class for screen UIs
-├── animations.py      # Cell, flag, confetti, and explosion animations
-├── solver.py          # Solver orchestrator (no-guess verification + auto-solver)
-├── solver_utils.py    # Pure logic analysis (Basic, Advanced, Global deductions)
-├── images/            # UI images (flags, audio icon, win/lose screens)
-└── audio/             # Sound effects and music
+```text
+├── main.py                # App entry point, screen routing
+├── config.py              # Game constants and shared configuration
+├── game_engine.py         # Centralized game state and core logic orchestration
+├── screen_start.py        # Start screen interaction logic
+├── screen_instructions.py # Instructions screen interaction logic
+├── screen_custom.py       # Custom game setup screen logic
+├── screen_game.py         # Game screen input handlers and interaction logic
+├── board.py               # Cell class, board generation, mine placement
+├── ui.py                  # All drawing functions, menus, game-over screens
+├── ui_checks.py           # Reusable UI element click detection
+├── button.py              # Reusable Button class for screen UIs
+├── animations.py          # Cell, flag, confetti, and explosion animations
+├── solver.py              # Solver orchestrator (no-guess verification + auto-solver)
+├── solver_utils.py        # Pure logic analysis (Basic, Advanced, Global deductions)
+├── images/                # UI images (flags, audio icon, win/lose screens)
+└── audio/                 # Sound effects and music
 ```
 
 ## Architecture
