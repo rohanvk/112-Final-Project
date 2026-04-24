@@ -3,8 +3,9 @@ from board import *
 
 def drawTimer(app):
     timer = 0 if app.firstClick else app.timer
-    drawLabel(f'{pythonRound(timer, 1)}', app.width/2 + 85, 45 ,align='left', size=24, fill ='white')
-    drawImage(app.timerimage, app.width/2 + 50, 45, align = 'center')
+    statusY = app.boardTop / 2
+    drawLabel(f'{pythonRound(timer, 1)}', app.width/2 + 85, statusY ,align='left', size=24, fill ='white')
+    drawImage(app.timerimage, app.width/2 + 50, statusY, align = 'center')
 
 def drawStatus(app):
     flagsPlaced = 0
@@ -14,25 +15,43 @@ def drawStatus(app):
                 flagsPlaced += 1
     
     minesLeft = app.numMines - flagsPlaced
+    statusY = app.boardTop / 2
     
-    # Display the mines left
-    drawLabel(minesLeft, app.width/2, 45, size=24, align='right', fill='white')
-    drawImage(app.flagImage, app.width/2 - 55, 45, align='center', width=40,height=40 )
+    # mines left
+    drawLabel(minesLeft, app.width/2, statusY, size=24, align='right', fill='white')
+    drawImage(app.flagImage, app.width/2 - 55, statusY, align='center', width=40,height=40 )
     
-    # Display no guess mode status
+    # no guess mode status
     if getattr(app, 'noGuessMode', True) == False:
-        drawLabel("no guess mode off", app.width/2, 75, align='center', size=12, fill='red', bold=True)
+        drawLabel("no guess mode off", app.width/2, statusY + 30, align='center', size=12, fill='red', bold=True)
         
-    # Auto Solve Button
+    # Autosolve button
     btnW, btnH = 90, 30
-    btnX = app.width - btnW - 20
-    btnY = 30
+    btnX = app.width * 0.75 - btnW/2
+    btnY = statusY - btnH/2
     if getattr(app, 'autoSolve', False):
         fillColor = rgb(200, 200, 200)
     else:
         fillColor = 'white'
     drawRoundedRect(btnX, btnY, btnW, btnH, radius=5, fill=fillColor, border=fillColor)
     drawLabel("Auto Solve", btnX + btnW/2, btnY + btnH/2, size=14, bold=True)
+    
+    # Audio Button
+    audioX = app.width - 80
+    audioY = statusY
+    audioR = 15
+    if getattr(app, 'audioImage', None):
+        drawImage(app.audioImage, audioX, audioY, align='center', width=audioR*2, height=audioR*2)
+    else:
+        drawRect(audioX-audioR, audioY-audioR, audioR*2, audioR*2, fill='gray')
+    if getattr(app, 'muted', False):
+        drawLine(audioX - audioR, audioY - audioR, audioX + audioR, audioY + audioR, fill='red', lineWidth=3)
+        
+    # X Button (Back to Start)
+    backX = app.width - 30
+    backY = statusY
+    backR = 15
+    drawLabel("X", backX, backY, fill='white', bold=True, size=28)
 
 def drawCells(app):
     cellW = app.boardWidth / app.cols
@@ -299,12 +318,21 @@ def menuLogic(app, mouseX, mouseY):
     
     # Clicked option?
     if app.isDropdownOpen and menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:        
-        itemIdx = (mouseY - menuOptTop) // app.menuH       
-        for i, diffName in enumerate(app.difficulties.keys()):
-            if i == itemIdx:
-                app.currentDifficulty = diffName
-                app.rows, app.cols, app.numMines = app.difficulties[diffName]
-                restartApp(app)
+        itemIdx = int((mouseY - menuOptTop) // app.menuH)
+        diffNames = list(app.difficulties.keys())
+        if 0 <= itemIdx < len(diffNames):
+            diffName = diffNames[itemIdx]
+            if diffName == "Custom" and not getattr(app, 'customConfigured', False):
+                app.isDropdownOpen = False
+                return 'custom'
+            app.currentDifficulty = diffName
+            app.rows, app.cols, app.numMines = app.difficulties[diffName]
+            if diffName == "Custom":
+                app.noGuessMode = getattr(app, 'customNoGuess', True)
+            else:
+                app.noGuessMode = True
+            restartApp(app)
+        app.isDropdownOpen = False
         return True
     app.isDropdownOpen = False 
     # Clicked menu?
@@ -330,7 +358,37 @@ def startOverButton(app, mouseX, mouseY):
                     if (cell.hasMine or cell.flagged) and cell.waveDelay > -1:
                         cell.waveDelay = 0
         return True
+    
+def autoSolver(app,mouseX,mouseY):
+    statusY = app.boardTop / 2
+    btnW, btnH = 90, 30
+    btnX = app.width * 0.75 - btnW/2
+    btnY = statusY - btnH/2
+    if btnX <= mouseX <= btnX + btnW and btnY <= mouseY <= btnY + btnH:
+        app.autoSolve = not getattr(app, 'autoSolve', False)
+        app.solverTarget = None
+        return True
+    return False
 
+def checkAudioButton(app, mouseX, mouseY):
+    statusY = app.boardTop / 2
+    audioX = app.width - 80
+    audioY = statusY
+    audioR = 15
+    if audioX - audioR <= mouseX <= audioX + audioR and audioY - audioR <= mouseY <= audioY + audioR:
+        app.muted = not getattr(app, 'muted', False)
+        return True
+    return False
+
+def checkBackButton(app, mouseX, mouseY):
+    statusY = app.boardTop / 2
+    backX = app.width - 30
+    backY = statusY
+    backR = 15
+    if ((mouseX - backX)**2 + (mouseY - backY)**2)**0.5 <= backR:
+        app.autoSolve = False
+        return 'start'
+    return False
 
 def drawGameScreens(app):
     if not app.gameOver: return

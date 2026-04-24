@@ -18,7 +18,7 @@ def lossAnimation(app):
     if not stillExploding:
         if not app.endflag:
             try:
-                if getattr(app, 'loseMusic', None): app.loseMusic.play(restart=True)
+                if getattr(app, 'loseMusic', None) and not getattr(app, 'muted', False): app.loseMusic.play(restart=True)
             except:
                 pass
         app.endflag = True
@@ -43,7 +43,7 @@ def triggerWin(app):
         pass
 
     try:
-        if getattr(app, 'winHarp', None): app.winHarp.play()
+        if getattr(app, 'winHarp', None) and not getattr(app, 'muted', False): app.winHarp.play()
     except:
         pass
     app.winnerMusicTimer = 80 # Play win music after harp (~4 seconds)
@@ -68,17 +68,16 @@ def wonGame(app, coords):
     cell = app.board[row][col]
     revealedCount = revealCell(app, row,col)
     
-    # Play reveal sounds
     if revealedCount > 10:
-        if app.bigDigSound is not None:
+        if app.bigDigSound is not None and not getattr(app, 'muted', False):
             app.bigDigSound.play(restart=True)
     elif revealedCount > 0:
         adj = cell.adjacentMines
         if 1 <= adj <= 8:
-            if app.digSounds[adj-1] is not None:
+            if app.digSounds[adj-1] is not None and not getattr(app, 'muted', False):
                 app.digSounds[adj-1].play(restart=True)
         else:
-            if app.digSounds[0] is not None:
+            if app.digSounds[0] is not None and not getattr(app, 'muted', False):
                 app.digSounds[0].play(restart=True)
 
     if revealedCount > 10:
@@ -127,7 +126,7 @@ def openMines(app, cell, row, col):
     # Play random mine sound
     if app.mineSounds:
         mineSound = random.choice(app.mineSounds)
-        if mineSound is not None:
+        if mineSound is not None and not getattr(app, 'muted', False):
             mineSound.play(restart=True)
 
 def stepCellAnimations(cell):

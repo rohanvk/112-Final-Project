@@ -1,5 +1,7 @@
 #Heavy ai used here, plan/idea was mine
 from solver_utils import analyze_tier_1, analyze_tier_2, analyze_global
+from board import *
+from animations import *
 
 def isBoardSolvableNoGuesses(app, startRow, startCol):
     rows, cols = app.rows, app.cols
@@ -91,3 +93,41 @@ def getNextSolverAction(app):
     if actions: return actions[0]
     
     return None
+
+def autoSolverLogic(app):
+    if getattr(app, 'autoSolve', False):
+        if getattr(app, 'autoSolveTimer', 0) <= 0:
+            app.autoSolveTimer = 2 # run every 2 steps
+            
+            action = getNextSolverAction(app)
+            if action:
+                actType, (r, c) = action
+                app.solverTarget = (r, c)
+                
+                cell = app.board[r][c]
+                if actType == 'reveal':
+                    if app.firstClick:
+                        placeMines(app, r, c)
+                        app.firstClick = False
+                        app.startTime = time.time() - 1
+                        app.timer = 1
+                    if not cell.flagged:
+                        if cell.hasMine:
+                            startGameOver(app, cell, (r, c))
+                        else:
+                            wonGame(app, (r, c))
+                elif actType == 'flag':
+                    if not cell.flagged:
+                        cell.flagged = True
+                        cell.isFlagAnimating = True
+                        cell.flagScale = 0.1
+                        try:
+                            if getattr(app, 'plantSound', None) and not getattr(app, 'muted', False): app.plantSound.play(restart=True)
+                        except:
+                            pass
+            else:
+                app.solverTarget = None
+                app.autoSolve = False # Stuck or done
+        else:
+            app.autoSolveTimer -= 1
+            

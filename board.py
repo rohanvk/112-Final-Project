@@ -44,7 +44,8 @@ def restartApp(app):
     app.forcedWin = False
     app.endflag = False
     app.winnerMusicTimer = 0
-    app.noGuessMode = True
+    app.autoSolve = False
+    app.solverTarget = None
 
     # Stop all playing sounds safely
     for attr in ['loseMusic', 'winHarp', 'winMusic']:
