@@ -1,8 +1,8 @@
 #Heavy ai used here, plan/idea was mine
 from solver_utils import analyze_tier_1, analyze_tier_2, analyze_global
 from board import *
-from animations import *
 
+#This function is for the hidden solver that runs when no guess mode is active
 def isBoardSolvableNoGuesses(app, startRow, startCol):
     rows, cols = app.rows, app.cols
     board = app.board
@@ -20,6 +20,7 @@ def isBoardSolvableNoGuesses(app, startRow, startCol):
                 for dc in [-1, 0, 1]:
                     nr, nc = r+dr, c+dc
                     if 0 <= nr < rows and 0 <= nc < cols:
+                        #recursively opens cells
                         if (nr, nc) not in revealed and (nr, nc) not in known_mines:
                             known_safe.add((nr, nc))
                             reveal(nr, nc)
@@ -56,7 +57,8 @@ def isBoardSolvableNoGuesses(app, startRow, startCol):
                     elif actType == 'flag':
                         known_mines.add(cell)
                 progress = True
-                
+        
+        #if we can't do anything, figure out if we are done with the board
         if not progress:
             actions = analyze_global(rows, cols, app.numMines, revealed, known_mines)
             if actions:
@@ -67,21 +69,27 @@ def isBoardSolvableNoGuesses(app, startRow, startCol):
                     elif actType == 'flag':
                         known_mines.add(cell)
                 progress = True
-                
+
+        #If we can't make progress, give up on the board    
         if not progress:
             return False
             
     return True
 
+#This function is for the visible solver that runs when the autosolve button is pressed
 def getNextSolverAction(app):
     rows, cols = app.rows, app.cols
     board = app.board
-    
+
+    #gets the current board state
     revealed = [(r, c) for r in range(rows) for c in range(cols) if board[r][c].revealed]
     known_mines = set([(r, c) for r in range(rows) for c in range(cols) if board[r][c].flagged])
     
+    #opens the middle cell if there's nothing open
     if not revealed:
         return ('reveal', (rows // 2, cols // 2))
+
+    #passes up the results of the solver logic one step at a time
 
     actions = analyze_tier_1(board, rows, cols, revealed, known_mines)
     if actions: return actions[0]
@@ -94,40 +102,5 @@ def getNextSolverAction(app):
     
     return None
 
-def autoSolverLogic(app):
-    if getattr(app, 'autoSolve', False):
-        if getattr(app, 'autoSolveTimer', 0) <= 0:
-            app.autoSolveTimer = 2 # run every 2 steps
-            
-            action = getNextSolverAction(app)
-            if action:
-                actType, (r, c) = action
-                app.solverTarget = (r, c)
-                
-                cell = app.board[r][c]
-                if actType == 'reveal':
-                    if app.firstClick:
-                        placeMines(app, r, c)
-                        app.firstClick = False
-                        app.startTime = time.time() - 1
-                        app.timer = 1
-                    if not cell.flagged:
-                        if cell.hasMine:
-                            startGameOver(app, cell, (r, c))
-                        else:
-                            wonGame(app, (r, c))
-                elif actType == 'flag':
-                    if not cell.flagged:
-                        cell.flagged = True
-                        cell.isFlagAnimating = True
-                        cell.flagScale = 0.1
-                        try:
-                            if getattr(app, 'plantSound', None) and not getattr(app, 'muted', False): app.plantSound.play(restart=True)
-                        except:
-                            pass
-            else:
-                app.solverTarget = None
-                app.autoSolve = False # Stuck or done
-        else:
-            app.autoSolveTimer -= 1
+
             

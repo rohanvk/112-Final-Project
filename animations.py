@@ -2,89 +2,7 @@ from cmu_graphics import *
 from ui import *
 import random
 
-def lossAnimation(app):
-    stillExploding = False
-    for r in range(app.rows):
-        for c in range(app.cols):
-            cell = app.board[r][c]
-            if (cell.hasMine or cell.flagged) and cell.waveDelay > -1:
-                stillExploding = True
-                cell.waveDelay -= 1
-                if cell.waveDelay <= 0:
-                    if cell.flagged:
-                        popFlags(cell)
-                    if cell.hasMine:
-                        openMines(app, cell, r, c)
-    if not stillExploding:
-        if not app.endflag:
-            try:
-                if getattr(app, 'loseMusic', None) and not getattr(app, 'muted', False): app.loseMusic.play(restart=True)
-            except:
-                pass
-        app.endflag = True
 
-def triggerWin(app):
-    if app.firstClick:
-        from board import placeMines
-        placeMines(app, 0, 0)
-        app.firstClick = False
-    
-    app.gameOver = True
-    app.isWin = True
-    app.endflag = True
-    app.forcedWin = True
-    app.winFlashTimer = 10
-    
-    # Audio
-    try:
-        if getattr(app, 'loseMusic', None): app.loseMusic.pause()
-        if getattr(app, 'winMusic', None): app.winMusic.pause()
-    except:
-        pass
-
-    try:
-        if getattr(app, 'winHarp', None) and not getattr(app, 'muted', False): app.winHarp.play()
-    except:
-        pass
-    app.winnerMusicTimer = 80 # Play win music after harp (~4 seconds)
-
-    # Save score
-    if app.currentDifficulty in app.bestScores:
-        app.bestScores[app.currentDifficulty].append(app.timer)
-        app.bestScores[app.currentDifficulty].sort()
-    # Pop all flags and generate confetti
-    app.confetti = []
-    for r in range(app.rows):
-        for c in range(app.cols):
-            checkCell = app.board[r][c]
-            if checkCell.flagged:
-                popFlags(checkCell)
-    spawnWinConfetti(app)
-
-
-
-def wonGame(app, coords):
-    row, col = coords
-    cell = app.board[row][col]
-    revealedCount = revealCell(app, row,col)
-    
-    if revealedCount > 10:
-        if app.bigDigSound is not None and not getattr(app, 'muted', False):
-            app.bigDigSound.play(restart=True)
-    elif revealedCount > 0:
-        adj = cell.adjacentMines
-        if 1 <= adj <= 8:
-            if app.digSounds[adj-1] is not None and not getattr(app, 'muted', False):
-                app.digSounds[adj-1].play(restart=True)
-        else:
-            if app.digSounds[0] is not None and not getattr(app, 'muted', False):
-                app.digSounds[0].play(restart=True)
-
-    if revealedCount > 10:
-        app.shakeTimer = 5 # shake screen
-    
-    if checkWin(app) or app.forcedWin:
-        triggerWin(app)
 
 def popFlags(cell):
     cell.flagged = False
@@ -105,6 +23,7 @@ def removeFlag(cell):
     cell.flagDespawnDy = random.randint(-12, -8) 
     cell.flagDespawnDx = random.randint(-4, 4)
 
+#animation on mine open
 def openMines(app, cell, row, col):
     cell.revealed = True
     cell.isAnimating = True
@@ -117,13 +36,14 @@ def openMines(app, cell, row, col):
     # get unique color
     colorIndex = (row * 11 + col * 17) % 8 + 1
     mineBgColor, _ = app.numberColors[colorIndex]
-    # get cell center
+
+    # get cell center and spawn confetti
     l, t = getCellLeftTop(app, row, col)
     w, h = getCellSize(app)
     cx, cy = l + w/2, t + h/2
     spawnLoseConfetti(app, cx, cy, mineBgColor)
     
-    # Play random mine sound
+    # play random mine sound on explode
     if app.mineSounds:
         mineSound = random.choice(app.mineSounds)
         if mineSound is not None and not getattr(app, 'muted', False):
@@ -141,9 +61,10 @@ def stepCellAnimations(cell):
             cell.animScale = 0
             cell.isAnimating = False
 
+#flag animations (used light ai for outlining)
 def stepFlagAnimations(cell):
     if cell.isFlagAnimating:
-        cell.flagScale += 0.4  # Increase size by 20% per frame
+        cell.flagScale += 0.4 
         if cell.flagScale >= 1.0:
             cell.flagScale = 1.0
             cell.isFlagAnimating = False
@@ -161,6 +82,7 @@ def stepFlagDespawn(cell):
             cell.flagDespawnScale = 0
             cell.isFlagDespawning = False
 
+#faster and no flutter compared to lose confetti (als0 no fade out)
 def spawnWinConfetti(app):
     confettiColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
     for i in range(150):
@@ -175,6 +97,7 @@ def spawnWinConfetti(app):
             'opacity': 100
         })
 
+# used some ai to create this
 def spawnLoseConfetti(app, cx, cy, mineBgColor):
     if not hasattr(app, 'confetti'): app.confetti = [] # make sure we have app.confetti
     # add 8 particles for loss
@@ -196,7 +119,7 @@ def spawnLoseConfetti(app, cx, cy, mineBgColor):
 def stepConfetti(app):
     for p in getattr(app, 'confetti', []): #used ai for this part to get confetti during end
         p['dy'] += 0.2              # Gravity
-        # Flutter effect
+        # Flutter effect (ai)
         if p['dx'] > 0: p['dx'] -= 0.05
         elif p['dx'] < 0: p['dx'] += 0.05
         
@@ -212,6 +135,7 @@ def stepConfetti(app):
     # Remove if faded
     app.confetti = [p for p in app.confetti if p.get('opacity', 100) > 0]
 
+#make the confetti!
 def drawConfetti(app):
     for p in getattr(app, 'confetti', []):
         # Only draw it if it's on the screen and visible

@@ -1,5 +1,6 @@
 from cmu_graphics import *
 from board import *
+#this file is pretty self explanatory 
 
 def drawTimer(app):
     timer = 0 if app.firstClick else app.timer
@@ -7,6 +8,7 @@ def drawTimer(app):
     drawLabel(f'{pythonRound(timer, 1)}', app.width/2 + 85, statusY ,align='left', size=24, fill ='white')
     drawImage(app.timerimage, app.width/2 + 50, statusY, align = 'center')
 
+#draw flags left and mines
 def drawStatus(app):
     flagsPlaced = 0
     for row in range(app.rows):
@@ -25,8 +27,8 @@ def drawStatus(app):
     if getattr(app, 'noGuessMode', True) == False:
         drawLabel("no guess mode off", app.width/2, statusY + 30, align='center', size=12, fill='red', bold=True)
         
-    # Autosolve button
-    btnW, btnH = 90, 30
+    # Autosolve button (used some ai for the spacing)
+    btnW, btnH = 80, 30
     btnX = app.width * 0.75 - btnW/2
     btnY = statusY - btnH/2
     if getattr(app, 'autoSolve', False):
@@ -36,7 +38,7 @@ def drawStatus(app):
     drawRoundedRect(btnX, btnY, btnW, btnH, radius=5, fill=fillColor, border=fillColor)
     drawLabel("Auto Solve", btnX + btnW/2, btnY + btnH/2, size=14, bold=True)
     
-    # Audio Button
+    # Audio button/image
     audioX = app.width - 80
     audioY = statusY
     audioR = 15
@@ -47,7 +49,7 @@ def drawStatus(app):
     if getattr(app, 'muted', False):
         drawLine(audioX - audioR, audioY - audioR, audioX + audioR, audioY + audioR, fill='red', lineWidth=3)
         
-    # X Button (Back to Start)
+    # X button (Back to Start)
     backX = app.width - 30
     backY = statusY
     backR = 15
@@ -57,6 +59,7 @@ def drawCells(app):
     cellW = app.boardWidth / app.cols
     cellH = app.boardHeight / app.rows
 
+    #draw the cells
     for row in range(app.rows):
         for col in range(app.cols):
             cell = app.board[row][col]
@@ -66,6 +69,7 @@ def drawCells(app):
             cx = l + cellW/2
             cy = t + cellH/2
             
+            #draw the mines
             if cell.revealed:
                 if cell.hasMine:
                     # mines
@@ -79,8 +83,10 @@ def drawCells(app):
                     # center = dark color
                     radius = min(cellW, cellH) * 0.25
                     drawCircle(cx, cy, radius, fill=mineCircleColor)
+                
+                #draw the dirt (opened cells)
                 else:
-                    # dirt checker
+                    # dirt checker pattern
                     if (row + col) % 2 == 0:
                         dirtColor = rgb(229, 194, 159)
                     else:
@@ -92,11 +98,13 @@ def drawCells(app):
                         # Get color for num
                         numColor = app.textColors[cell.adjacentMines]
                         drawLabel(cell.adjacentMines, cx, cy, size=cellW*0.8, bold=True, fill=numColor, font='arial')
-                        
+                 #used ai for this, draws a circle on the targeted solver cell       
                 if getattr(app, 'solverTarget', None) == (row, col):
                     drawCircle(cx, cy, min(cellW, cellH) * 0.25, fill=rgb(150, 150, 150), opacity=70)
+            
+            #draw the grass
             else:
-                # grass checker
+                # grass checker pattern
                 if (row + col) % 2 == 0:
                     baseColor = rgb(170, 215, 81)  # Light grass
                 else:
@@ -105,7 +113,7 @@ def drawCells(app):
                 # hover / win flash color / solver target
                 isFlashing = getattr(app, 'winFlashTimer', 0) > 0
                 if app.hoveredCell == (row, col) or getattr(app, 'solverTarget', None) == (row, col) or isFlashing:
-                    cellColor = rgb(191, 225, 125) # Hover / Flash color
+                    cellColor = rgb(191, 225, 125) # Hover / flash / target color
                 else:
                     cellColor = baseColor
                 
@@ -114,13 +122,14 @@ def drawCells(app):
                 if getattr(app, 'solverTarget', None) == (row, col):
                     drawCircle(cx, cy, min(cellW, cellH) * 0.25, fill=rgb(150, 150, 150), opacity=70)
                 
+                #draw the flags
                 if cell.flagged:
                     if cell.flagScale > 0:
                         sw = cellW * 0.8 * cell.flagScale
                         sh = cellH * 0.8 * cell.flagScale
                         drawImage(app.flagImage, cx, cy, align='center',width=sw, height=sh)
 
-    # Loop 2 to draw an edge between the borders of the grass and opened cells, ai assisted
+    # draw a continuous edge between the borders of the grass and opened cells, ai assisted
     edgeColor = rgb(135, 175, 58)
     edgeThickness = 2
     
@@ -128,6 +137,7 @@ def drawCells(app):
         for col in range(app.cols):
             cell = app.board[row][col]
             
+            #on open cells add an edge between not opened cells
             if cell.revealed:
                 l = app.boardLeft + col * cellW
                 t = app.boardTop + row * cellH
@@ -153,6 +163,7 @@ def drawCells(app):
         for col in range(app.cols):
             cell = app.board[row][col]
             
+            #grass animation
             if cell.isAnimating:
                 l = app.boardLeft + col * cellW
                 t = app.boardTop + row * cellH
@@ -192,6 +203,7 @@ def drawCells(app):
                     
                     drawImage(app.flagImage, fcx, fcy, align='center', width=sw, height=sh)
 
+#add a slight backdrop
 def drawBoard(app):
     for row in range(app.rows):
         for col in range(app.cols):
@@ -241,13 +253,14 @@ def drawRoundedRect(x, y, w, h, radius, fill='black', border=None, borderWidth=1
         drawLine(x, y + radius, x, y + h - radius, fill=border, lineWidth=borderWidth) # Left
         drawLine(x + w, y + radius, x + w, y + h - radius, fill=border, lineWidth=borderWidth) # Right
         
-        # Arcs
+        # Arcs (possibly a small bug here?)
         d = radius * 2
         drawArc(x + w - radius, y + radius, d, d, 0, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Right
         drawArc(x + radius, y + radius, d, d, 90, 90, fill=None, border=border, borderWidth=borderWidth) # Top-Left
         drawArc(x + radius, y + h - radius, d, d, 180, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Left
         drawArc(x + w - radius, y + h - radius, d, d, 270, 90, fill=None, border=border, borderWidth=borderWidth) # Bottom-Right
 
+#changes size based on option selected
 def getMenuButtonWidth(app):
     #dynamic button sizing in the menu
     return 10 + len(app.currentDifficulty) * 10 + 30
@@ -298,98 +311,7 @@ def drawMenu(app):
             drawLabel(diffName, menuOptX + app.checkmarkIndentX, optY + app.menuH/2, 
                       fill='black', bold=True, size=16, font='arial', align='left')
 
-def checkMenuHover(app, mouseX, mouseY):
-    if getattr(app, 'isDropdownOpen', False):
-        menuOptX = app.menuX + app.menuShiftX
-        menuOptTop = app.menuY + app.menuH
-        menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
-        
-        if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
-            app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
-        else:
-            app.menuHoveredItem = None
-
-def menuLogic(app, mouseX, mouseY):
-    #used AI to help with this (dropdown menu)
-    menuOptX = app.menuX + app.menuShiftX
-    # Shift menu over
-    menuOptTop = app.menuY + app.menuH
-    menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
-    
-    # Clicked option?
-    if app.isDropdownOpen and menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:        
-        itemIdx = int((mouseY - menuOptTop) // app.menuH)
-        diffNames = list(app.difficulties.keys())
-        if 0 <= itemIdx < len(diffNames):
-            diffName = diffNames[itemIdx]
-            if diffName == "Custom" and not getattr(app, 'customConfigured', False):
-                app.isDropdownOpen = False
-                return 'custom'
-            app.currentDifficulty = diffName
-            app.rows, app.cols, app.numMines = app.difficulties[diffName]
-            if diffName == "Custom":
-                app.noGuessMode = getattr(app, 'customNoGuess', True)
-            else:
-                app.noGuessMode = True
-            restartApp(app)
-        app.isDropdownOpen = False
-        return True
-    app.isDropdownOpen = False 
-    # Clicked menu?
-    btnW = getMenuButtonWidth(app)
-    if app.menuX <= mouseX <= app.menuX + btnW and app.menuY <= mouseY <= app.menuY + app.menuH:
-        app.isDropdownOpen = True
-        return True
-
-def startOverButton(app, mouseX, mouseY):
-    if app.gameOver:
-        if app.isWin or app.endflag:
-            tryScale = min((app.width * 0.6) / 1796, (app.height * 0.15) / 396)
-            tryW, tryH = 1796 * tryScale, 396 * tryScale
-            cx, cy = app.width / 2, app.height / 1.5
-            if (cx - tryW/2 <= mouseX <= cx + tryW/2) and (cy - tryH/2 <= mouseY <= cy + tryH/2):
-                restartApp(app)
-                return True
-        elif not app.isWin and not app.endflag:
-            # Fast-forward the remaining explosion wave
-            for r in range(app.rows):
-                for c in range(app.cols):
-                    cell = app.board[r][c]
-                    if (cell.hasMine or cell.flagged) and cell.waveDelay > -1:
-                        cell.waveDelay = 0
-        return True
-    
-def autoSolver(app,mouseX,mouseY):
-    statusY = app.boardTop / 2
-    btnW, btnH = 90, 30
-    btnX = app.width * 0.75 - btnW/2
-    btnY = statusY - btnH/2
-    if btnX <= mouseX <= btnX + btnW and btnY <= mouseY <= btnY + btnH:
-        app.autoSolve = not getattr(app, 'autoSolve', False)
-        app.solverTarget = None
-        return True
-    return False
-
-def checkAudioButton(app, mouseX, mouseY):
-    statusY = app.boardTop / 2
-    audioX = app.width - 80
-    audioY = statusY
-    audioR = 15
-    if audioX - audioR <= mouseX <= audioX + audioR and audioY - audioR <= mouseY <= audioY + audioR:
-        app.muted = not getattr(app, 'muted', False)
-        return True
-    return False
-
-def checkBackButton(app, mouseX, mouseY):
-    statusY = app.boardTop / 2
-    backX = app.width - 30
-    backY = statusY
-    backR = 15
-    if ((mouseX - backX)**2 + (mouseY - backY)**2)**0.5 <= backR:
-        app.autoSolve = False
-        return 'start'
-    return False
-
+#draw the end game screens
 def drawGameScreens(app):
     if not app.gameOver: return
     
@@ -403,7 +325,7 @@ def drawGameScreens(app):
     tryW, tryH = 1796 * tryScale, 396 * tryScale
     
     # draw win screen
-    if checkWin(app) or app.forcedWin:
+    if app.isWin:
         drawRect(0,0,app.width,app.height,fill='slategray',opacity=50)
         drawImage(app.winimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
         drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
@@ -415,7 +337,7 @@ def drawGameScreens(app):
         drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
 
     # draw counters over the images if win or lose screen is shown
-    if checkWin(app) or app.endflag or app.forcedWin:
+    if app.isWin or app.endflag:
         bestList = app.bestScores[app.currentDifficulty]
         bestText = str(bestList[0]) if len(bestList) > 0 else "-"
         currText = str(app.timer)
