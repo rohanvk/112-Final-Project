@@ -17,14 +17,22 @@ def lossAnimation(app):
                         openMines(app, cell, r, c)
     if not stillExploding:
         if not app.endflag:
-            if app.loseMusic is not None:
-                app.loseMusic.play(loop=True)
+            try:
+                if getattr(app, 'loseMusic', None): app.loseMusic.play(restart=True)
+            except:
+                pass
         app.endflag = True
 
 def triggerWin(app):
+    if app.firstClick:
+        from board import placeMines
+        placeMines(app, 0, 0)
+        app.firstClick = False
+    
     app.gameOver = True
     app.isWin = True
     app.endflag = True
+    app.forcedWin = True
     app.winFlashTimer = 10
     
     # Audio
@@ -53,25 +61,7 @@ def triggerWin(app):
                 popFlags(checkCell)
     spawnWinConfetti(app)
 
-def triggerLose(app):
-    app.gameOver = True
-    app.isWin = False
-    app.shakeTimer = 8
 
-    # Stop win music if it's playing
-    try:
-        if getattr(app, 'winHarp', None): app.winHarp.pause()
-        if getattr(app, 'winMusic', None): app.winMusic.pause()
-    except:
-        pass
-
-    # Start explosion wave from top-left (0,0)
-    for r in range(app.rows):
-        for c in range(app.cols):
-            cell = app.board[r][c]
-            if (cell.hasMine or cell.flagged) and not cell.revealed:
-                dist = (r**2 + c**2)**0.5
-                cell.waveDelay = int(dist * 12)
 
 def wonGame(app, coords):
     row, col = coords
@@ -81,15 +71,15 @@ def wonGame(app, coords):
     # Play reveal sounds
     if revealedCount > 10:
         if app.bigDigSound is not None:
-            app.bigDigSound.play()
+            app.bigDigSound.play(restart=True)
     elif revealedCount > 0:
         adj = cell.adjacentMines
         if 1 <= adj <= 8:
             if app.digSounds[adj-1] is not None:
-                app.digSounds[adj-1].play()
+                app.digSounds[adj-1].play(restart=True)
         else:
             if app.digSounds[0] is not None:
-                app.digSounds[0].play()
+                app.digSounds[0].play(restart=True)
 
     if revealedCount > 10:
         app.shakeTimer = 5 # shake screen
@@ -135,11 +125,10 @@ def openMines(app, cell, row, col):
     spawnLoseConfetti(app, cx, cy, mineBgColor)
     
     # Play random mine sound
-    if app.mineSounds and app.soundsPlayedThisStep < 3:
+    if app.mineSounds:
         mineSound = random.choice(app.mineSounds)
         if mineSound is not None:
-            mineSound.play()
-            app.soundsPlayedThisStep += 1
+            mineSound.play(restart=True)
 
 def stepCellAnimations(cell):
     # if cell animating, change animation
@@ -205,15 +194,6 @@ def spawnLoseConfetti(app, cx, cy, mineBgColor):
             'opacity': 100
         })
 
-def stepWinConfetti(app):
-    for p in app.confetti:
-        p['dy'] += 0.2
-        p['x'] += p['dx']
-        p['y'] += p['dy']
-        if p['dx'] > 0: p['dx'] -= 0.1
-        elif p['dx'] < 0: p['dx'] += 0.1
-
-#difference between these functions is that win confetti does not despawn and falls faster (no flutter)
 def stepConfetti(app):
     for p in getattr(app, 'confetti', []): #used ai for this part to get confetti during end
         p['dy'] += 0.2              # Gravity

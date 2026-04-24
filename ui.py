@@ -18,6 +18,21 @@ def drawStatus(app):
     # Display the mines left
     drawLabel(minesLeft, app.width/2, 45, size=24, align='right', fill='white')
     drawImage(app.flagImage, app.width/2 - 55, 45, align='center', width=40,height=40 )
+    
+    # Display no guess mode status
+    if getattr(app, 'noGuessMode', True) == False:
+        drawLabel("no guess mode off", app.width/2, 75, align='center', size=12, fill='red', bold=True)
+        
+    # Auto Solve Button
+    btnW, btnH = 90, 30
+    btnX = app.width - btnW - 20
+    btnY = 30
+    if getattr(app, 'autoSolve', False):
+        fillColor = rgb(200, 200, 200)
+    else:
+        fillColor = 'white'
+    drawRoundedRect(btnX, btnY, btnW, btnH, radius=5, fill=fillColor, border=fillColor)
+    drawLabel("Auto Solve", btnX + btnW/2, btnY + btnH/2, size=14, bold=True)
 
 def drawCells(app):
     cellW = app.boardWidth / app.cols
@@ -58,6 +73,9 @@ def drawCells(app):
                         # Get color for num
                         numColor = app.textColors[cell.adjacentMines]
                         drawLabel(cell.adjacentMines, cx, cy, size=cellW*0.8, bold=True, fill=numColor, font='arial')
+                        
+                if getattr(app, 'solverTarget', None) == (row, col):
+                    drawCircle(cx, cy, min(cellW, cellH) * 0.25, fill=rgb(150, 150, 150), opacity=70)
             else:
                 # grass checker
                 if (row + col) % 2 == 0:
@@ -65,14 +83,17 @@ def drawCells(app):
                 else:
                     baseColor = rgb(162, 209, 73)  # Dark grass
                 
-                # hover / win flash color
+                # hover / win flash color / solver target
                 isFlashing = getattr(app, 'winFlashTimer', 0) > 0
-                if app.hoveredCell == (row, col) or isFlashing:
+                if app.hoveredCell == (row, col) or getattr(app, 'solverTarget', None) == (row, col) or isFlashing:
                     cellColor = rgb(191, 225, 125) # Hover / Flash color
                 else:
                     cellColor = baseColor
                 
                 drawRect(l, t, cellW, cellH, fill=cellColor)
+                
+                if getattr(app, 'solverTarget', None) == (row, col):
+                    drawCircle(cx, cy, min(cellW, cellH) * 0.25, fill=rgb(150, 150, 150), opacity=70)
                 
                 if cell.flagged:
                     if cell.flagScale > 0:
@@ -131,7 +152,7 @@ def drawCells(app):
                 
                 # get color
                 isFlashing = getattr(app, 'winFlashTimer', 0) > 0
-                if app.hoveredCell == (row, col) or isFlashing:
+                if app.hoveredCell == (row, col) or getattr(app, 'solverTarget', None) == (row, col) or isFlashing:
                     grassColor = rgb(191, 225, 125) # Flash / Hover effect
                 elif (row + col) % 2 == 0:
                     grassColor = rgb(170, 215, 81)  # Light grass
@@ -258,6 +279,17 @@ def drawMenu(app):
             drawLabel(diffName, menuOptX + app.checkmarkIndentX, optY + app.menuH/2, 
                       fill='black', bold=True, size=16, font='arial', align='left')
 
+def checkMenuHover(app, mouseX, mouseY):
+    if getattr(app, 'isDropdownOpen', False):
+        menuOptX = app.menuX + app.menuShiftX
+        menuOptTop = app.menuY + app.menuH
+        menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
+        
+        if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
+            app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
+        else:
+            app.menuHoveredItem = None
+
 def menuLogic(app, mouseX, mouseY):
     #used AI to help with this (dropdown menu)
     menuOptX = app.menuX + app.menuShiftX
@@ -290,10 +322,13 @@ def startOverButton(app, mouseX, mouseY):
             if (cx - tryW/2 <= mouseX <= cx + tryW/2) and (cy - tryH/2 <= mouseY <= cy + tryH/2):
                 restartApp(app)
                 return True
-        if not app.isWin:
-            if not app.endflag and app.loseMusic is not None:
-                app.loseMusic.play(loop=True)
-            app.endflag = True
+        elif not app.isWin and not app.endflag:
+            # Fast-forward the remaining explosion wave
+            for r in range(app.rows):
+                for c in range(app.cols):
+                    cell = app.board[r][c]
+                    if (cell.hasMine or cell.flagged) and cell.waveDelay > -1:
+                        cell.waveDelay = 0
         return True
 
 

@@ -41,11 +41,12 @@ def onAppStart(app):
     app.menuHoveredItem = None
     app.currentDifficulty = "Medium"
     app.menuShiftX = 0       
+    app.noGuessMode = True
     app.checkmarkIndentX = 30
     app.endflag = False
     app.winnerMusicTimer = 0
 
-    # Audio initialization
+    # Audio
     app.bigDigSound = Sound('audio/game_audio BIG_DIG.mp3')
     app.mineSounds = [s for s in [Sound(f'audio/game_audio MINE_{i}.mp3') for i in range(1, 6)] if s is not None]
     app.digSounds = [s for s in [Sound(f'audio/game_audio DIG_REVEAL_{i}.mp3') for i in range(1, 9)] if s is not None]
@@ -111,44 +112,6 @@ def onAppStart(app):
     app.loseimage = CMUImage(rawLose)
     app.isLoaded = True
 
-def restartApp(app):
-    app.paused = False
-    app.board = [[Cell(row, col) for col in range (app.cols)] for row in range(app.rows)]
-    app.gameOver = False
-    app.isWin = False
-    app.firstClick = True
-    app.timer = 0
-    app.startTime = time.time()
-    app.confetti = []
-    app.hoveredCell = None
-    app.winFlashTimer = 0
-    app.shakeTimer = 0
-    app.isDropdownOpen = False
-    app.menuHoveredItem = None
-    app.forcedWin = False
-    app.endflag = False
-    app.winnerMusicTimer = 0
-
-    # Stop all playing sounds safely
-    for attr in ['loseMusic', 'winHarp', 'winMusic']:
-        try:
-            sound = getattr(app, attr, None)
-            if sound is not None:
-                sound.pause()
-        except:
-            # If CMU Sound system fails or attribute is missing, just continue
-            pass
-
-def checkMenuHover(app, mouseX, mouseY):
-    if getattr(app, 'isDropdownOpen', False):
-        menuOptX = app.menuX + app.menuShiftX
-        menuOptTop = app.menuY + app.menuH
-        menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
-        
-        if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
-            app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
-        else:
-            app.menuHoveredItem = None
 
 def onMouseMove(app, mouseX, mouseY):
     if app.gameOver:
@@ -163,41 +126,64 @@ def onMouseMove(app, mouseX, mouseY):
     #used some ai to get the hover for the menu
     checkMenuHover(app, mouseX, mouseY)
 
-def onMousePress(app, mouseX, mouseY, button):
-    if not menuLogic(app,mouseX,mouseY) and not startOverButton(app,mouseX,mouseY):
-        coords = getCell(app, mouseX, mouseY)
-        if coords is None: return
-        row, col = coords
-        cell = app.board[row][col]
+def onMousePress(app, mouseX, mouseY, button=0):
+    # Check Auto Solve button
+    btnW, btnH = 90, 30
+    btnX = app.width - btnW - 20
+    btnY = 30
+    if btnX <= mouseX <= btnX + btnW and btnY <= mouseY <= btnY + btnH:
+        if button == 0 or button == 1:
+            app.autoSolve = not getattr(app, 'autoSolve', False)
+            app.solverTarget = None
+            return
 
-        # Right Click (flag)
-        if button == 2:
-            if not cell.revealed:
-                if cell.flagged: # remove flag
-                    removeFlag(cell)
-                    app.unplantSound.play()
+    # Allow menus and restart button even if auto-solving
+    if menuLogic(app,mouseX,mouseY): return
+    if startOverButton(app,mouseX,mouseY):
+        app.autoSolve = False # Reset on new game
+        return
 
-                cell.flagged = not cell.flagged
+    if getattr(app, 'autoSolve', False): return # Block manual play when auto solving
 
-                if cell.flagged: #add flag
-                    cell.isFlagAnimating = True
-                    cell.flagScale = 0.1
-                    app.plantSound.play()
+    coords = getCell(app, mouseX, mouseY)
+    if coords is None: return
+    row, col = coords
+    cell = app.board[row][col]
 
-        # Left Click (open)
-        elif button == 0:
-            if cell.flagged: return 
-            
-            if app.firstClick:
-                placeMines(app, row, col)
-                app.firstClick = False
-                app.startTime = time.time() - 1
-                app.timer = 1
+    # Right Click (flag)
+    if button == 2:
+        if not cell.revealed:
+            if cell.flagged: # remove flag
+                removeFlag(cell)
+                try:
+                    if getattr(app, 'unplantSound', None): app.unplantSound.play(restart=True)
+                except:
+                    pass
 
-            if cell.hasMine:
-                startGameOver(app, cell, coords)
-            else:
-                wonGame(app, coords)
+            cell.flagged = not cell.flagged
+
+            if cell.flagged: #add flag
+                cell.isFlagAnimating = True
+                cell.flagScale = 0.1
+                try:
+                    if getattr(app, 'plantSound', None): app.plantSound.play(restart=True)
+                except:
+                    pass
+
+    # Left Click (open)
+    elif button == 0:
+        if cell.flagged: return 
+        
+        if app.firstClick:
+            placeMines(app, row, col)
+            app.firstClick = False
+            app.startTime = time.time() - 1
+            app.timer = 1
+
+        if cell.hasMine:
+            startGameOver(app, cell, coords)
+        else:
+            wonGame(app, coords)
 
 def onKeyPress(app, key):
     if key == 'space':
@@ -208,7 +194,7 @@ def onKeyPress(app, key):
         if key == 'p': 
             app.paused = not app.paused
         if key == 'e':
-            triggerLose(app)
+            startGameOver(app)
         if key == 'w':
             triggerWin(app)
 
@@ -216,21 +202,54 @@ def onStep(app):
     if not getattr(app, 'isLoaded', False): return
     app.soundsPlayedThisStep = 0
 
-    if not app.gameOver:
-        # Guarantee music stops when not in game over
-        try:
-            if getattr(app, 'loseMusic', None): app.loseMusic.pause()
-            if getattr(app, 'winMusic', None): app.winMusic.pause()
-            if getattr(app, 'winHarp', None): app.winHarp.pause()
-        except:
-            pass
-
     if app.boardWidth != app.width or app.boardHeight != app.height - 90:
         app.boardWidth = app.width
         app.boardHeight = app.height - 90
     shakeScreen(app)
     if not app.paused and not app.gameOver:
         takeStep(app)
+        
+        # AUTO SOLVER LOGIC
+        if getattr(app, 'autoSolve', False):
+            if getattr(app, 'autoSolveTimer', 0) <= 0:
+                app.autoSolveTimer = 2 # run every 2 ticks
+                
+                from solver import getNextSolverAction
+                action = getNextSolverAction(app)
+                if action:
+                    actType, (r, c) = action
+                    app.solverTarget = (r, c)
+                    
+                    cell = app.board[r][c]
+                    if actType == 'reveal':
+                        if app.firstClick:
+                            placeMines(app, r, c)
+                            app.firstClick = False
+                            app.startTime = time.time() - 1
+                            app.timer = 1
+                        if not cell.flagged:
+                            if cell.hasMine:
+                                startGameOver(app, cell, (r, c))
+                            else:
+                                wonGame(app, (r, c))
+                    elif actType == 'flag':
+                        if not cell.flagged:
+                            cell.flagged = True
+                            cell.isFlagAnimating = True
+                            cell.flagScale = 0.1
+                            try:
+                                if getattr(app, 'plantSound', None): app.plantSound.play(restart=True)
+                            except:
+                                pass
+                else:
+                    app.solverTarget = None
+                    app.autoSolve = False # Stuck or done
+            else:
+                app.autoSolveTimer -= 1
+                
+    if app.gameOver and getattr(app, 'autoSolve', False):
+        app.autoSolve = False
+        app.solverTarget = None
     
     #animations!
     for row in range(app.rows):
@@ -246,14 +265,15 @@ def onStep(app):
         else:
             if app.winFlashTimer > 0:
                 app.winFlashTimer -= 1
-            stepWinConfetti(app)
             
-            # Sequential win music transition
+            # win music 
             if app.winnerMusicTimer > 0:
                 app.winnerMusicTimer -= 1
                 if app.winnerMusicTimer == 0:
-                    if app.winMusic is not None:
-                        app.winMusic.play(loop=True)
+                    try:
+                        if getattr(app, 'winMusic', None): app.winMusic.play(restart=True)
+                    except:
+                        pass
 
         stepConfetti(app)
 

@@ -42,40 +42,68 @@ def restartApp(app):
     app.isDropdownOpen = False
     app.menuHoveredItem = None
     app.forcedWin = False
+    app.endflag = False
+    app.winnerMusicTimer = 0
+    app.noGuessMode = True
+
+    # Stop all playing sounds safely
+    for attr in ['loseMusic', 'winHarp', 'winMusic']:
+        try:
+            sound = getattr(app, attr, None)
+            if sound is not None:
+                sound.pause()
+        except:
+            pass
 
 
 def placeMines(app, startRow, startCol):
-    #Safe zone (the clicked cell and its 8 neighbors) some ai used here for planning
+    # Set safe zone size based on board dimensions (some ai used here)
+    # Boards larger than 20x20 get a 5x5 safe area, smaller get 3x3
+    safeRange = 2 if (app.rows > 20 or app.cols > 20) else 1
     safeZones = []
-    for dr in [-1, 0, 1]:
-        for dc in [-1, 0, 1]:
+    for dr in range(-safeRange, safeRange + 1):
+        for dc in range(-safeRange, safeRange + 1):
             safeZones.append((startRow + dr, startCol + dc))
 
-    # Place mines using random.sample
-    candidates = []
-    for row in range(app.rows):
-        for col in range(app.cols):
-            if (row, col) not in safeZones:
-                candidates.append((row, col))
-
-    # Make sure we don't try to place more mines than available cells
-    numMines = min(app.numMines, len(candidates))
-    minePositions = random.sample(candidates, numMines)
-    for (row, col) in minePositions:
-        app.board[row][col].hasMine = True
+    from solver import isBoardSolvableNoGuesses
     
-    #Count neighbors, some ai used here for boundary check
+    # Precompute candidates
+    candidates = []
+    safeZonesSet = set(safeZones)
     for row in range(app.rows):
         for col in range(app.cols):
-            if not app.board[row][col].hasMine:
-                count = 0
-                for dr in [-1, 0, 1]:
-                    for dc in [-1, 0, 1]:
-                        newRow, newCol = row + dr, col + dc
-                        if (0 <= newRow < app.rows and 0 <= newCol < app.cols and 
-                            app.board[newRow][newCol].hasMine):
-                            count += 1
-                app.board[row][col].adjacentMines = count
+            if (row, col) not in safeZonesSet:
+                candidates.append((row, col))
+    
+    numMines = min(app.numMines, len(candidates))
+
+    while True:
+        # Reset board
+        for row in range(app.rows):
+            for col in range(app.cols):
+                app.board[row][col].hasMine = False
+                app.board[row][col].adjacentMines = 0
+                
+        # Place mines
+        minePositions = random.sample(candidates, numMines)
+        for (row, col) in minePositions:
+            app.board[row][col].hasMine = True
+        
+        # Only add on mines
+        for (r, c) in minePositions:
+            for dr in range(-1, 2):
+                for dc in range(-1, 2):
+                    if dr == 0 and dc == 0: continue
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < app.rows and 0 <= nc < app.cols:
+                        app.board[nr][nc].adjacentMines += 1
+                    
+        # No guessing!
+        if getattr(app, 'noGuessMode', True):
+            if isBoardSolvableNoGuesses(app, startRow, startCol):
+                break
+        else:
+            break
         
 def getCell(app, x, y):
     if (app.boardLeft <= x < app.boardLeft + app.boardWidth and
@@ -120,19 +148,35 @@ def revealCell(app, r, c): # recursive reveal
                 count += revealCell(app, r + dr, c + dc)
     return count
 
-def startGameOver(app, cell, coords):
+def startGameOver(app, cell=None, coords=None):
+    if app.firstClick:
+        placeMines(app, 0, 0)
+        app.firstClick = False
+
     app.gameOver = True
     app.isWin = False
     app.shakeTimer = 8
-    cell.revealed = True
-    row, col = coords
+    
+    # Stop win music if it's playing
+    try:
+        if getattr(app, 'winHarp', None): app.winHarp.pause()
+        if getattr(app, 'winMusic', None): app.winMusic.pause()
+    except:
+        pass
+
+    if cell is not None:
+        cell.revealed = True
+        
+    row = coords[0] if coords else 0
+    col = coords[1] if coords else 0
 
     for r in range(app.rows):
         for c in range(app.cols):
             checkCell = app.board[r][c]
-            if r-row == 0 and c - col == 0:
+            if r-row == 0 and c - col == 0 and coords is not None:
                 checkCell.waveDelay = 1
-            elif (checkCell.hasMine or checkCell.flagged) and not checkCell.revealed:
+            elif (((checkCell.hasMine or checkCell.flagged) and not checkCell.revealed) 
+            or (coords is None and (checkCell.hasMine or checkCell.flagged))):
                 dist = ((r - row)**2 + (c - col)**2)**0.5
                 checkCell.waveDelay = int(dist * 12)
 
