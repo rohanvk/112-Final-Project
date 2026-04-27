@@ -206,4 +206,11 @@ def get_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-main()
+try:
+    main()
+except Exception as e:
+    import traceback
+    # Write crash log next to the EXE so we can diagnose silent failures
+    log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'crash_log.txt')
+    with open(log_path, 'w') as f:
+        f.write(traceback.format_exc())
