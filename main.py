@@ -1,3 +1,4 @@
+
 import sys
 import os
 import traceback
@@ -72,7 +73,7 @@ from screen_game import *
 
 def onAppStart(app):
     app.isLoaded = False
-    app.setMaxShapeCount(None) # Remove CMU Graphics shape limit to prevent exceptions
+    app.setMaxShapeCount(100000) # Remove CMU Graphics shape limit to prevent exceptions
     app.width = app.height = 750
     app.stepsPerSecond = 20
     app.rows = 14
