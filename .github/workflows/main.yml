@@ -103,6 +103,12 @@ jobs:
         generate_release_notes: true
         append_body: true
         body: |
+          ## Downloads
+          | Platform | File |
+          |---|---|
+          | 🪟 **Windows** | `Minesweeper_Setup.exe` — Installer (recommended) |
+          | 🍎 **Mac** | `Minesweeper.dmg` — Disk image |
+
           **Note for Mac Users:** 
           If you receive an error that the app is damaged or cannot be opened, you will need to bypass Apple's Gatekeeper quarantine for unsigned apps.
           Open your terminal and run:
