@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 
 # Redirect stdout and stderr to devnull if they are None to prevent crashes in unwindowed exes
 if sys.stdout is None:
@@ -7,58 +8,79 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
 
-#For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
-#All images and audio from the Google Minesweeper game unless otherwise cited
+# Helper to resolve paths inside PyInstaller bundles
+def get_path(relative_path):
+    """ Get the absolute path to a resource, works for dev and for PyInstaller EXE """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
-#Dev commands: p to pause, w to win state, e to lose state, space to reset current board
+def _write_crash_log(exc):
+    """ Write crash details to the user's Desktop so it's always visible and writable """
+    try:
+        desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
+        log_path = os.path.join(desktop, 'Minesweeper_crash_log.txt')
+        with open(log_path, 'w') as f:
+            f.write(traceback.format_exc())
+    except:
+        pass
 
-#Feature list:
-'''
-Three Difficulties: Pre-configured board sizes and mine counts for Easy (8×10, 10 mines), Medium (14×18, 40 mines), and Hard (20×24, 99 mines).
-Custom Game Mode: configure board size, mine counts, if the no guess algorithm should be used.
-No-Guess Mode: guarantees the board can be solved purely through logic without any blind guessing. The game automatically regenerates the board.
+try:
 
-3 tier solver: A built-in solver engine that powers No-Guess mode using:
-    Basic: Standard adjacent mine/flag deductions.
-    Advanced: Constraint propagation using BFS between overlapping numbered cells.
-    Global: Deductions based on comparing total remaining mines to total unknown cells.
-Autosolver: renders algorithm with full graphics and audio.
-Audio: Sound effects for digging, planting flags, and mine explosions, plus background music for win/lose states. Includes mute.
-Score: Keeps best time for every map, including custom boards
+    #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
+    #All images and audio from the Google Minesweeper game unless otherwise cited
 
-Animations:
-    Cell reveal animations (with physics)
-    Cell edge outlines dynamically updated
-    Physics-based flag planting and removal
-    Mine explosions featuring confetti particles
-    Screen shake effects
-    ROUNDED CORNER RECTANGLES
-    Support for any size screen
+    #Dev commands: p to pause, w to win state, e to lose state, space to reset current board
 
-Multiple Screens: includes guards to prevent early switching or unexpected behavior
-    Start Screen: Main menu with opening imagery.
-    Instructions Screen: Rules and an explanation of the No-Guess mechanics.
-    Custom Setup Screen: Configuration for custom games.
-    Game Screen: The main Minesweeper interface.
+    #Feature list:
+    '''
+    Three Difficulties: Pre-configured board sizes and mine counts for Easy (8×10, 10 mines), Medium (14×18, 40 mines), and Hard (20×24, 99 mines).
+    Custom Game Mode: configure board size, mine counts, if the no guess algorithm should be used.
+    No-Guess Mode: guarantees the board can be solved purely through logic without any blind guessing. The game automatically regenerates the board.
 
-Controls: left-click (reveal), right-click (flag), spacebar (restart), and 'P' (pause/unpause).'''
+    3 tier solver: A built-in solver engine that powers No-Guess mode using:
+        Basic: Standard adjacent mine/flag deductions.
+        Advanced: Constraint propagation using BFS between overlapping numbered cells.
+        Global: Deductions based on comparing total remaining mines to total unknown cells.
+    Autosolver: renders algorithm with full graphics and audio.
+    Audio: Sound effects for digging, planting flags, and mine explosions, plus background music for win/lose states. Includes mute.
+    Score: Keeps best time for every map, including custom boards
 
-from cmu_graphics import *
-from PIL import Image as PILImage #image optimization
-import time #need because otherwise timer tracks framerate
+    Animations:
+        Cell reveal animations (with physics)
+        Cell edge outlines dynamically updated
+        Physics-based flag planting and removal
+        Mine explosions featuring confetti particles
+        Screen shake effects
+        ROUNDED CORNER RECTANGLES
+        Support for any size screen
 
-from board import *
-from config import DIFFICULTIES, NUMBER_COLORS, TEXT_COLORS
-from ui import *
-from ui_checks import *
-from game_engine import *
-from solver import *
-from button import Button
-from animations import *
-from screen_start import *
-from screen_instructions import *
-from screen_custom import *
-from screen_game import *
+    Multiple Screens: includes guards to prevent early switching or unexpected behavior
+        Start Screen: Main menu with opening imagery.
+        Instructions Screen: Rules and an explanation of the No-Guess mechanics.
+        Custom Setup Screen: Configuration for custom games.
+        Game Screen: The main Minesweeper interface.
+
+    Controls: left-click (reveal), right-click (flag), spacebar (restart), and 'P' (pause/unpause).'''
+
+    from cmu_graphics import *
+    from PIL import Image as PILImage #image optimization
+    import time #need because otherwise timer tracks framerate
+
+    from board import *
+    from config import DIFFICULTIES, NUMBER_COLORS, TEXT_COLORS
+    from ui import *
+    from ui_checks import *
+    from game_engine import *
+    from solver import *
+    from button import Button
+    from animations import *
+    from screen_start import *
+    from screen_instructions import *
+    from screen_custom import *
+    from screen_game import *
 
 def onAppStart(app):
     app.isLoaded = False
@@ -193,24 +215,7 @@ def main():
 
 
 
-#Ignore this function, it is for the EXE version of my code
-import sys
-import os
-
-def get_path(relative_path):
-    """ Get the absolute path to a resource, works for dev and for PyInstaller EXE """
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
-try:
     main()
+
 except Exception as e:
-    import traceback
-    # Write crash log next to the EXE so we can diagnose silent failures
-    log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'crash_log.txt')
-    with open(log_path, 'w') as f:
-        f.write(traceback.format_exc())
+    _write_crash_log(e)
