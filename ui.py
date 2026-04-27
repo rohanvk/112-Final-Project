@@ -58,6 +58,7 @@ def drawStatus(app):
 def drawCells(app):
     cellW = app.boardWidth / app.cols
     cellH = app.boardHeight / app.rows
+    baseFlagSize = min(cellW, cellH) * 0.8
 
     #draw the cells
     for row in range(app.rows):
@@ -125,8 +126,8 @@ def drawCells(app):
                 #draw the flags
                 if cell.flagged:
                     if cell.flagScale > 0:
-                        sw = cellW * 0.8 * cell.flagScale
-                        sh = cellH * 0.8 * cell.flagScale
+                        sw = baseFlagSize * cell.flagScale
+                        sh = baseFlagSize * cell.flagScale
                         drawImage(app.flagImage, cx, cy, align='center',width=sw, height=sh)
 
     # draw a continuous edge between the borders of the grass and opened cells, ai assisted
@@ -196,12 +197,12 @@ def drawCells(app):
                     l = app.boardLeft + col * cellW
                     t = app.boardTop + row * cellH
                     
-                    sw = cellW * 0.8 * cell.flagDespawnScale
-                    sh = cellH * 0.8 * cell.flagDespawnScale
+                    sw = baseFlagSize * cell.flagDespawnScale
+                    sh = baseFlagSize * cell.flagDespawnScale
                     fcx = l + cellW/2 + cell.flagDespawnOffsetX
                     fcy = t + cellH/2 + cell.flagDespawnOffsetY
                     
-                    drawImage(app.flagImage, fcx, fcy, align='center', width=sw, height=sh)
+                    drawImage(app.flagImage, fcx, fcy, align='center', width=sw, height=sh, rotateAngle=cell.flagDespawnRotation)
 
 #add a slight backdrop
 def drawBoard(app):

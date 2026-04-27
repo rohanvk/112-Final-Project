@@ -18,6 +18,8 @@ class AnimationData:
         self.flagDespawnOffsetY = 0
         self.flagDespawnDx = 0
         self.flagDespawnDy = 0
+        self.flagDespawnRotation = 0
+        self.flagDespawnDRotation = 0
         self.waveDelay = -1
 
 #Cell class inherits from animationdata because we only need certain attributes for all cells

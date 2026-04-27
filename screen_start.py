@@ -23,8 +23,9 @@ def start_redrawAll(app):
     drawRect(0, splitY, app.width, app.height - splitY, fill=grassColor)
     
     if getattr(app, 'openingImage', None):
-        imgW = app.width * 0.8
-        imgH = app.height * 0.25
+        # Image is 688x230. Scale maintaining aspect ratio (max 80% width or 35% height)
+        imgScale = min((app.width * 0.8) / 688, (app.height * 0.35) / 230)
+        imgW, imgH = 688 * imgScale, 230 * imgScale
         drawImage(app.openingImage, app.width/2, splitY, align='center',
                   width=imgW, height=imgH)
     

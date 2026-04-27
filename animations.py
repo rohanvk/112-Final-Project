@@ -12,6 +12,8 @@ def popFlags(cell):
     cell.flagDespawnOffsetY = 0
     cell.flagDespawnDy = random.uniform(-18, -10)
     cell.flagDespawnDx = random.uniform(-10, 10)
+    cell.flagDespawnRotation = 0
+    cell.flagDespawnDRotation = random.gauss(0, 15) # Bell curve centered at 0 so extreme rotations are rare
 
 #difference between these two functions is that the top is more aggresive and also removes the flags entirely
 def removeFlag(cell):
@@ -22,6 +24,8 @@ def removeFlag(cell):
     #pop up and then out
     cell.flagDespawnDy = random.randint(-12, -8) 
     cell.flagDespawnDx = random.randint(-4, 4)
+    cell.flagDespawnRotation = 0
+    cell.flagDespawnDRotation = random.gauss(0, 10) # Bell curve centered at 0 so extreme rotations are rare
 
 #animation on mine open
 def openMines(app, cell, row, col):
@@ -75,6 +79,9 @@ def stepFlagDespawn(cell):
         cell.flagDespawnDy += gravity
         cell.flagDespawnOffsetX += cell.flagDespawnDx
         cell.flagDespawnOffsetY += cell.flagDespawnDy
+        
+        if cell.flagDespawnDy < 0:
+            cell.flagDespawnRotation += cell.flagDespawnDRotation
 
         if cell.flagDespawnDy > 0:
             cell.flagDespawnScale -= 0.1
