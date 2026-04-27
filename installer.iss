@@ -1,8 +1,8 @@
 [Setup]
 ; Basic App Info
 AppName=Minesweeper
-AppVersion=1.1
-VersionInfoVersion=1.1
+AppVersion=1.2
+VersionInfoVersion=1.2
 AppPublisher=rohanvk
 AppCopyright=Copyright (C) 2026 rohanvk
 AppPublisherURL=https://github.com/rohanvk/112-Final-Project
@@ -28,8 +28,8 @@ RestartApplications=no
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; This grabs the compiled .exe from PyInstaller's dist folder
-Source: "dist\Minesweeper.exe"; DestDir: "{app}"; Flags: ignoreversion
+; This grabs the compiled output from PyInstaller's dist folder (folder mode)
+Source: "dist\Minesweeper\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Creates the Start Menu and Desktop shortcuts
