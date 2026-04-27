@@ -61,13 +61,9 @@ jobs:
 
     - name: Package into DMG
       run: |
-        # Wait for background macOS processes (like Spotlight) to release file locks on the .app
-        sleep 10
-        for i in 1 2 3; do
-          hdiutil create -volname "Minesweeper" -srcfolder "dist/Minesweeper.app" -ov -format UDZO "dist/Minesweeper.dmg" && break
-          echo "Resource busy, retrying in 5 seconds..."
-          sleep 5
-        done
+        # Prevent Spotlight from indexing the build output (root cause of "Resource busy")
+        mdutil -i off dist/
+        hdiutil create -volname "Minesweeper" -srcfolder "dist/Minesweeper.app" -ov -format UDZO "dist/Minesweeper.dmg"
 
     - name: Upload Mac DMG Artifact
       uses: actions/upload-artifact@v4
