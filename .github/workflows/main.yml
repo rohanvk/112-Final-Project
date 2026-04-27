@@ -101,3 +101,9 @@ jobs:
           release-files/*.dmg
         # Automatically generates release notes based on your recent commits!
         generate_release_notes: true
+        append_body: true
+        body: |
+          **Note for Mac Users:** 
+          If you receive an error that the app is damaged or cannot be opened, you will need to bypass Apple's Gatekeeper quarantine for unsigned apps.
+          Open your terminal and run:
+          `xattr -cr /path/to/your/extracted/Minesweeper.app`
