@@ -25,7 +25,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Build with PyInstaller
-      run: pyinstaller --onefile --icon="images/minesweeper.ico" --add-data "images;images" --add-data "audio;audio" main.py
+      run: pyinstaller --onefile --icon="minesweeper.ico" --add-data "images;images" --add-data "audio;audio" main.py
 
     - name: Upload the EXE as an Artifact
       uses: actions/upload-artifact@v4
