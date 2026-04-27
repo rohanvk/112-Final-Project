@@ -1,3 +1,12 @@
+import sys
+import os
+
+# Redirect stdout and stderr to devnull if they are None to prevent crashes in unwindowed exes
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
 #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
 #All images and audio from the Google Minesweeper game unless otherwise cited
 
