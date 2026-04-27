@@ -31,6 +31,7 @@ A fully-featured Minesweeper clone built with CMU Graphics for the 15-112 Final 
 ## Project Structure
 
 ```text
+├── .github/workflows/     # CI/CD pipeline for building Windows and Mac executables
 ├── main.py                # App entry point, screen routing
 ├── config.py              # Game constants and shared configuration
 ├── game_engine.py         # Centralized game state and core logic orchestration
@@ -45,6 +46,7 @@ A fully-featured Minesweeper clone built with CMU Graphics for the 15-112 Final 
 ├── animations.py          # Cell, flag, confetti, and explosion animations
 ├── solver.py              # Solver orchestrator (no-guess verification + auto-solver)
 ├── solver_utils.py        # Pure logic analysis (Basic, Advanced, Global deductions)
+├── installer.iss          # Inno Setup configuration for Windows Installer
 ├── images/                # UI images (flags, audio icon, win/lose screens)
 └── audio/                 # Sound effects and music
 ```
@@ -71,15 +73,24 @@ Uses CMU Graphics' `runAppWithScreens` with a transition guard to prevent click 
 - `custom` — Configure rows, columns, mines, and No-Guess Mode toggle
 - `game` — The actual Minesweeper gameplay
 
-## Requirements
+## Installation
 
-- Python 3
+Pre-compiled, standalone executables are automatically generated for both Windows and Mac via GitHub Actions.
+
+1. Go to the **Releases** tab on GitHub.
+2. **For Windows**: Download the `Minesweeper_Setup.exe` installer, which will automatically install the game and place shortcuts on your desktop.
+3. **For Mac**: Download the `.dmg` file. 
+   - *Note for Mac Users*: Because the app is not signed with an Apple Developer certificate, you must bypass Gatekeeper quarantine. After copying `Minesweeper.app` to your Applications folder, open a terminal and run: `xattr -cr /Applications/Minesweeper.app`
+
+## Running from Source
+
+**Requirements:**
+- Python 3.11+
 - CMU Graphics (`cmu_graphics`)
 - Pillow (`PIL`)
 
-## Running
-
 ```bash
+pip install -r requirements.txt
 python main.py
 ```
 
