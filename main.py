@@ -17,16 +17,6 @@ def get_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-def _write_crash_log(exc):
-    """ Write crash details to the user's Desktop so it's always visible and writable """
-    try:
-        desktop = os.path.join(os.path.expanduser('~'), 'Desktop')
-        log_path = os.path.join(desktop, 'Minesweeper_crash_log.txt')
-        with open(log_path, 'w') as f:
-            f.write(traceback.format_exc())
-    except:
-        pass
-
 #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
 #All images and audio from the Google Minesweeper game unless otherwise cited
 
@@ -211,7 +201,4 @@ def onAppStart(app):
 def main():
     runAppWithScreens(initialScreen='start')
 
-try:
-    main()
-except Exception as e:
-    _write_crash_log(e)
+main()
