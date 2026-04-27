@@ -254,18 +254,24 @@ def wonGame(app, coords):
     
     #if its a big reveal special sound
     if revealedCount > 10:
-        if app.bigDigSound is not None and not getattr(app, 'muted', False):
-            app.bigDigSound.play(restart=True)
+        try:
+            if app.bigDigSound is not None and not getattr(app, 'muted', False):
+                app.bigDigSound.play(restart=True)
+        except:
+            pass
 
     #otherwise pick a sound based on the number of mines adjacent
     elif revealedCount > 0:
         adj = cell.adjacentMines
-        if 1 <= adj <= 8:
-            if app.digSounds[adj-1] is not None and not getattr(app, 'muted', False):
-                app.digSounds[adj-1].play(restart=True)
-        else:
-            if app.digSounds[0] is not None and not getattr(app, 'muted', False):
-                app.digSounds[0].play(restart=True)
+        try:
+            if 1 <= adj <= len(app.digSounds):
+                if app.digSounds[adj-1] is not None and not getattr(app, 'muted', False):
+                    app.digSounds[adj-1].play(restart=True)
+            elif len(app.digSounds) > 0:
+                if app.digSounds[0] is not None and not getattr(app, 'muted', False):
+                    app.digSounds[0].play(restart=True)
+        except:
+            pass
 
     if revealedCount > 10:
         app.shakeTimer = 5 # shake screen

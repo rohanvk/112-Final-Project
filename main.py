@@ -62,6 +62,7 @@ from screen_game import *
 
 def onAppStart(app):
     app.isLoaded = False
+    app.setMaxShapeCount(None) # Remove CMU Graphics shape limit to prevent exceptions
     app.width = app.height = 750
     app.stepsPerSecond = 20
     app.rows = 14
@@ -103,7 +104,7 @@ def onAppStart(app):
     app.customNoGuess = True
     app.customConfigured = False
 
-    # Audio
+    # Audio — wrap in try/except so missing files don't crash the app
     try:
         rawAudio = PILImage.open(get_path('images/Audio.png'))
         resizedAudio = rawAudio.resize((30, 30))
@@ -111,15 +112,21 @@ def onAppStart(app):
     except:
         app.audioImage = None
 
-    app.bigDigSound = Sound(get_path('audio/game_audio BIG_DIG.mp3'))
-    app.mineSounds = [s for s in [Sound(get_path(f'audio/game_audio MINE_{i}.mp3')) for i in range(1, 6)] if s is not None]
-    app.digSounds = [s for s in [Sound(get_path(f'audio/game_audio DIG_REVEAL_{i}.mp3')) for i in range(1, 9)] if s is not None]
+    def _safeSound(path):
+        try:
+            return Sound(get_path(path))
+        except:
+            return None
+
+    app.bigDigSound = _safeSound('audio/game_audio BIG_DIG.mp3')
+    app.mineSounds = [s for s in [_safeSound(f'audio/game_audio MINE_{i}.mp3') for i in range(1, 6)] if s is not None]
+    app.digSounds = [s for s in [_safeSound(f'audio/game_audio DIG_REVEAL_{i}.mp3') for i in range(1, 9)] if s is not None]
     app.soundsPlayedThisStep = 0
-    app.plantSound = Sound(get_path('audio/game_audio PLANT_FLAG.mp3'))
-    app.unplantSound = Sound(get_path('audio/game_audio UNPLANT_FLAG.mp3'))
-    app.loseMusic = Sound(get_path('audio/music_audio LOSE_MUSIC.mp3'))
-    app.winHarp = Sound(get_path('audio/music_audio WIN_WATER_HARP.mp3'))
-    app.winMusic = Sound(get_path('audio/music_audio WINNER_MUSIC.mp3'))
+    app.plantSound = _safeSound('audio/game_audio PLANT_FLAG.mp3')
+    app.unplantSound = _safeSound('audio/game_audio UNPLANT_FLAG.mp3')
+    app.loseMusic = _safeSound('audio/music_audio LOSE_MUSIC.mp3')
+    app.winHarp = _safeSound('audio/music_audio WIN_WATER_HARP.mp3')
+    app.winMusic = _safeSound('audio/music_audio WINNER_MUSIC.mp3')
 
     app.difficulties = DIFFICULTIES
     
@@ -135,25 +142,50 @@ def onAppStart(app):
     #image optimization (ai helped with this)
     imageWidth = 60
     imageHeight = 60
-        
-    rawFlag = PILImage.open(get_path('images/flag.png'))
-    resizedFlag = rawFlag.resize((imageWidth, imageHeight))
-    app.flagImage = CMUImage(resizedFlag)
-    rawArrow = PILImage.open(get_path('images/downArrow.png'))
-    app.downArrow = CMUImage(rawArrow)
-    rawCheck = PILImage.open(get_path('images/checkmark.png'))
-    app.checkmark = CMUImage(rawCheck)
-    rawTimer = PILImage.open(get_path('images/timerimage.png'))
-    resizedTimer = rawTimer.resize((44, 54))
-    app.timerimage = CMUImage(resizedTimer)
-    rawTry = PILImage.open(get_path('images/Try again.png'))
-    app.tryagain = CMUImage(rawTry)
-    rawWin = PILImage.open(get_path('images/Win screen.png'))
-    app.winimage = CMUImage(rawWin)
-    rawLose = PILImage.open(get_path('images/Lose screen.png'))
-    app.loseimage = CMUImage(rawLose)
-    rawOpening = PILImage.open(get_path('images/Minesweeper opening page.png'))
-    app.openingImage = CMUImage(rawOpening)
+
+    # Wrap all image loading so a missing file doesn't crash the app
+    try:
+        rawFlag = PILImage.open(get_path('images/flag.png'))
+        resizedFlag = rawFlag.resize((imageWidth, imageHeight))
+        app.flagImage = CMUImage(resizedFlag)
+    except:
+        app.flagImage = None
+    try:
+        rawArrow = PILImage.open(get_path('images/downArrow.png'))
+        app.downArrow = CMUImage(rawArrow)
+    except:
+        app.downArrow = None
+    try:
+        rawCheck = PILImage.open(get_path('images/checkmark.png'))
+        app.checkmark = CMUImage(rawCheck)
+    except:
+        app.checkmark = None
+    try:
+        rawTimer = PILImage.open(get_path('images/timerimage.png'))
+        resizedTimer = rawTimer.resize((44, 54))
+        app.timerimage = CMUImage(resizedTimer)
+    except:
+        app.timerimage = None
+    try:
+        rawTry = PILImage.open(get_path('images/Try again.png'))
+        app.tryagain = CMUImage(rawTry)
+    except:
+        app.tryagain = None
+    try:
+        rawWin = PILImage.open(get_path('images/Win screen.png'))
+        app.winimage = CMUImage(rawWin)
+    except:
+        app.winimage = None
+    try:
+        rawLose = PILImage.open(get_path('images/Lose screen.png'))
+        app.loseimage = CMUImage(rawLose)
+    except:
+        app.loseimage = None
+    try:
+        rawOpening = PILImage.open(get_path('images/Minesweeper opening page.png'))
+        app.openingImage = CMUImage(rawOpening)
+    except:
+        app.openingImage = None
     app.isLoaded = True
 
 def main():

@@ -108,9 +108,9 @@ def game_onStep(app):
     app.soundsPlayedThisStep = 0
 
     #dont draw if screen is too small
-    if app.boardWidth != app.width or app.boardHeight != app.height - 90:
+    if app.boardWidth != app.width or app.boardHeight != max(1, app.height - 90):
         app.boardWidth = app.width
-        app.boardHeight = app.height - 90
+        app.boardHeight = max(1, app.height - 90)
 
     shakeScreen(app)
     if not app.paused and not app.gameOver:

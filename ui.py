@@ -6,7 +6,8 @@ def drawTimer(app):
     timer = 0 if app.firstClick else app.timer
     statusY = app.boardTop / 2
     drawLabel(f'{pythonRound(timer, 1)}', app.width/2 + 85, statusY ,align='left', size=24, fill ='white')
-    drawImage(app.timerimage, app.width/2 + 50, statusY, align = 'center')
+    if getattr(app, 'timerimage', None):
+        drawImage(app.timerimage, app.width/2 + 50, statusY, align = 'center')
 
 #draw flags left and mines
 def drawStatus(app):
@@ -125,7 +126,7 @@ def drawCells(app):
                 
                 #draw the flags
                 if cell.flagged:
-                    if cell.flagScale > 0:
+                    if cell.flagScale > 0 and getattr(app, 'flagImage', None):
                         sw = baseFlagSize * cell.flagScale
                         sh = baseFlagSize * cell.flagScale
                         drawImage(app.flagImage, cx, cy, align='center',width=sw, height=sh)
@@ -328,14 +329,18 @@ def drawGameScreens(app):
     # draw win screen
     if app.isWin:
         drawRect(0,0,app.width,app.height,fill='slategray',opacity=50)
-        drawImage(app.winimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
-        drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
+        if getattr(app, 'winimage', None):
+            drawImage(app.winimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
+        if getattr(app, 'tryagain', None):
+            drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
 
     #draw lose screen
     elif app.endflag:
         drawRect(0,0,app.width,app.height,fill='slategray',opacity=50)
-        drawImage(app.loseimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
-        drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
+        if getattr(app, 'loseimage', None):
+            drawImage(app.loseimage, app.width/2, app.height/3, width=wlW, height=wlH, align='center')
+        if getattr(app, 'tryagain', None):
+            drawImage(app.tryagain, app.width/2, app.height/(3/2), width=tryW, height=tryH, align='center')
 
     # draw counters over the images if win or lose screen is shown
     if app.isWin or app.endflag:
