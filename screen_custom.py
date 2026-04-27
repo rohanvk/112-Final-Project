@@ -64,13 +64,23 @@ def custom_onMousePress(app, mouseX, mouseY):
     
     for i in range(3):
         if minus_btns[i].contains(mouseX, mouseY):
-            if i == 0: app.customRows = max(4, app.customRows - 1)
-            elif i == 1: app.customCols = max(4, app.customCols - 1)
-            elif i == 2: app.customMines = max(1, app.customMines - 1)
+            if i == 0: 
+                app.customRows = max(4, app.customRows - 1)
+                app.customMines = max(1, int(app.customRows * app.customCols * 0.2))
+            elif i == 1: 
+                app.customCols = max(4, app.customCols - 1)
+                app.customMines = max(1, int(app.customRows * app.customCols * 0.2))
+            elif i == 2: 
+                app.customMines = max(1, app.customMines - 1)
         elif plus_btns[i].contains(mouseX, mouseY):
-            if i == 0: app.customRows = min(30, app.customRows + 1)
-            elif i == 1: app.customCols = min(40, app.customCols + 1)
-            elif i == 2: app.customMines = min(app.customRows * app.customCols - 1, app.customMines + 1)
+            if i == 0: 
+                app.customRows = min(30, app.customRows + 1)
+                app.customMines = max(1, int(app.customRows * app.customCols * 0.2))
+            elif i == 1: 
+                app.customCols = min(40, app.customCols + 1)
+                app.customMines = max(1, int(app.customRows * app.customCols * 0.2))
+            elif i == 2: 
+                app.customMines = min(app.customRows * app.customCols - 1, app.customMines + 1)
     
     if toggleBtn.contains(mouseX, mouseY):
         app.customNoGuess = not getattr(app, 'customNoGuess', True)

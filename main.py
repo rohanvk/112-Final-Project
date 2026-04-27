@@ -111,7 +111,7 @@ def onAppStart(app):
     app.screenGuard = False
     app.customRows = 14
     app.customCols = 18
-    app.customMines = 40
+    app.customMines = int(14 * 18 * 0.2)
     app.customNoGuess = True
     app.customConfigured = False
 
