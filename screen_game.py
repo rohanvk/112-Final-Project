@@ -78,6 +78,7 @@ def game_onMousePress(app, mouseX, mouseY, button=0):
     elif button == 0:
         if cell.flagged: return 
         
+        preRevealedCount = 0
         if app.firstClick:
             safeZones = placeMines(app, row, col)
             app.firstClick = False
@@ -87,12 +88,12 @@ def game_onMousePress(app, mouseX, mouseY, button=0):
             # Explicitly reveal the entire safe area to guarantee the opening
             for r, c in safeZones:
                 if (r, c) != (row, col):
-                    revealCell(app, r, c)
+                    preRevealedCount += revealCell(app, r, c)
 
         if cell.hasMine:
             startGameOver(app, cell, coords)
         else:
-            wonGame(app, coords)
+            wonGame(app, coords, preRevealedCount)
 
 def game_onKeyPress(app, key):
     if key == 'space':

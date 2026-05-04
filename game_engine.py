@@ -285,10 +285,10 @@ def triggerWin(app):
                 popFlags(checkCell)
     spawnWinConfetti(app)
 
-def wonGame(app, coords):
+def wonGame(app, coords, preRevealedCount=0):
     row, col = coords
     cell = app.board[row][col]
-    revealedCount = revealCell(app, row, col)
+    revealedCount = revealCell(app, row, col) + preRevealedCount
     
     #if its a big reveal special sound
     if revealedCount > 10:
@@ -380,14 +380,15 @@ def _performSolverAction(app, action):
             app.firstClick = False
             app.startTime = time.time() - 1
             app.timer = 1
+            preRevealedCount = 0
             for sr, sc in safeZones:
                 if (sr, sc) != (r, c):
-                    revealCell(app, sr, sc)
+                    preRevealedCount += revealCell(app, sr, sc)
         if not cell.flagged:
             if cell.hasMine:
                 startGameOver(app, cell, (r, c))
             else:
-                wonGame(app, (r, c))
+                wonGame(app, (r, c), locals().get('preRevealedCount', 0))
     elif actType == 'flag':
         if not cell.flagged:
             cell.flagged = True
