@@ -27,7 +27,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Build Windows EXE
-      run: pyinstaller --onedir --windowed --name="Minesweeper" --icon="images/minesweeper.ico" --add-data "images;images" --add-data "audio;audio" main.py
+      run: pyinstaller --onedir --windowed --name="Minesweeper" --icon="images/minesweeper.ico" --add-data "images;images" --add-data "audio;audio" --add-data "installer.iss;." main.py
 
     - name: Build the Windows Installer
       run: iscc installer.iss
@@ -56,7 +56,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Build Mac App
-      run: pyinstaller --onedir --windowed --collect-all cmu_graphics --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" main.py
+      run: pyinstaller --onedir --windowed --collect-all cmu_graphics --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" --add-data "installer.iss:." main.py
 
     - name: Package into DMG
       run: |

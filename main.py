@@ -80,7 +80,17 @@ def onAppStart(app):
     app.isLoaded = False
     app.setMaxShapeCount(100000) # Remove CMU Graphics shape limit to prevent exceptions
     
-    app.version = "v1.4.2"
+    def _getVersion():
+        try:
+            with open(get_path('installer.iss'), 'r') as f:
+                for line in f:
+                    if line.startswith('AppVersion='):
+                        return 'v' + line.split('=')[1].strip()
+        except:
+            pass
+        return "v1.4.2" # Fallback if iss file isn't found
+        
+    app.version = _getVersion()
     app.updateAvailable = False
     app.updateUrl = ""
     
