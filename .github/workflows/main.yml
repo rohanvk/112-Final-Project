@@ -18,6 +18,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11' # Changed from 3.14 to a currently stable release
+        cache: 'pip'
 
     - name: Install dependencies
       run: |
@@ -27,9 +28,6 @@ jobs:
 
     - name: Build Windows EXE
       run: pyinstaller --onedir --windowed --name="Minesweeper" --icon="images/minesweeper.ico" --add-data "images;images" --add-data "audio;audio" main.py
-
-    - name: Install Inno Setup
-      run: choco install innosetup
 
     - name: Build the Windows Installer
       run: iscc installer.iss
@@ -49,6 +47,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: 'pip'
 
     - name: Install dependencies
       run: |
@@ -61,9 +60,6 @@ jobs:
 
     - name: Package into DMG
       run: |
-        # Flush pending filesystem writes and let background processes release locks
-        sync
-        sleep 5
         hdiutil create -volname "Minesweeper" -srcfolder "dist/Minesweeper.app" -ov -format UDZO "dist/Minesweeper.dmg"
 
     - name: Upload Mac DMG Artifact
