@@ -100,9 +100,7 @@ def drawCells(app):
                         # Get color for num
                         numColor = app.textColors[cell.adjacentMines]
                         drawLabel(cell.adjacentMines, cx, cy, size=cellW*0.8, bold=True, fill=numColor, font='arial')
-                 #used ai for this, draws a circle on the targeted solver cell       
-                if getattr(app, 'solverTarget', None) == (row, col):
-                    drawCircle(cx, cy, min(cellW, cellH) * 0.25, fill=rgb(150, 150, 150), opacity=70)
+                 #used ai for this, highlights the targeted solver cell       
             
             #draw the grass
             else:
@@ -120,9 +118,6 @@ def drawCells(app):
                     cellColor = baseColor
                 
                 drawRect(l, t, cellW, cellH, fill=cellColor)
-                
-                if getattr(app, 'solverTarget', None) == (row, col):
-                    drawCircle(cx, cy, min(cellW, cellH) * 0.25, fill=rgb(150, 150, 150), opacity=70)
                 
                 #draw the flags
                 if cell.flagged:
@@ -204,6 +199,11 @@ def drawCells(app):
                     fcy = t + cellH/2 + cell.flagDespawnOffsetY
                     
                     drawImage(app.flagImage, fcx, fcy, align='center', width=sw, height=sh, rotateAngle=cell.flagDespawnRotation)
+
+    # Draw animated solver circle at interpolated position
+    if getattr(app, '_solverCircleX', None) is not None and getattr(app, 'autoSolve', False):
+        radius = min(cellW, cellH) * 0.25
+        drawCircle(app._solverCircleX, app._solverCircleY, radius, fill=rgb(150, 150, 150), opacity=70)
 
 #add a slight backdrop
 def drawBoard(app):
@@ -344,7 +344,7 @@ def drawGameScreens(app):
 
     # draw counters over the images if win or lose screen is shown
     if app.isWin or app.endflag:
-        bestList = app.bestScores[app.currentDifficulty]
+        bestList = app.bestScores.get(app.currentDifficulty, [])
         bestText = str(bestList[0]) if len(bestList) > 0 else "-"
         currText = str(app.timer)
         

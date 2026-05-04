@@ -20,7 +20,7 @@ def checkMenuHover(app, mouseX, mouseY):
         menuOptBottom = menuOptTop + (app.menuH * len(app.difficulties))
         
         if menuOptX <= mouseX <= menuOptX + app.menuW and menuOptTop <= mouseY <= menuOptBottom:
-            app.menuHoveredItem = (mouseY - menuOptTop) // app.menuH
+            app.menuHoveredItem = int((mouseY - menuOptTop) // app.menuH)
         else:
             app.menuHoveredItem = None
 
@@ -80,12 +80,18 @@ def startOverButton(app, mouseX, mouseY):
 #checks if the autosolver button was pressed
 def autoSolver(app,mouseX,mouseY):
     statusY = app.boardTop / 2
-    btnW, btnH = 90, 30
+    btnW, btnH = 80, 30
     btnX = app.width * 0.75 - btnW/2
     btnY = statusY - btnH/2
     if btnX <= mouseX <= btnX + btnW and btnY <= mouseY <= btnY + btnH:
         app.autoSolve = not getattr(app, 'autoSolve', False)
         app.solverTarget = None
+        app._pendingSolverAction = None
+        app._solverQueue = []
+        app._solverCircleX = None
+        app._solverCircleY = None
+        app._solverTargetX = None
+        app._solverTargetY = None
         return True
     return False
 

@@ -3,6 +3,7 @@ import time
 from board import Cell
 
 from solver import isBoardSolvableNoGuesses, getNextSolverAction
+from solver_utils import analyze_tier_1, analyze_tier_2, analyze_global
 from animations import popFlags, spawnWinConfetti, openMines
 
 #This file runs the game play loop
@@ -28,6 +29,11 @@ def restartApp(app):
     #automatically stops autosolver
     app.autoSolve = False
     app.solverTarget = None
+    app._solverQueue = []
+    app._solverCircleX = None
+    app._solverCircleY = None
+    app._solverTargetX = None
+    app._solverTargetY = None
 
     # Stop all playing sounds safely (used ai here)
     for attr in ['loseMusic', 'winHarp', 'winMusic']:
@@ -38,15 +44,43 @@ def restartApp(app):
         except:
             pass
 
-def placeMines(app, startRow, startCol):
-    # Set safe zone size based on board dimensions (some ai used here)
-    # Boards larger than 20x20 get a 5x5 safe area, smaller get 3x3
-        #this makes the larger boards faster to solve with the algorithm
-    safeRange = 2 if (app.rows > 20 or app.cols > 20) else 1
+def _buildSafeZone(startRow, startCol, rows, cols):
     safeZones = []
-    for dr in range(-safeRange, safeRange + 1):
-        for dc in range(-safeRange, safeRange + 1):
-            safeZones.append((startRow + dr, startCol + dc))
+    if rows > 20 or cols > 20:
+        # 5x5 safe area for large boards
+        r = min(max(startRow, 2), rows - 3)
+        c = min(max(startCol, 2), cols - 3)
+        for dr in range(-2, 3):
+            for dc in range(-2, 3):
+                safeZones.append((r + dr, c + dc))
+    elif rows > 8 or cols > 10:
+        # 3x3 safe area for medium boards
+        r = min(max(startRow, 1), rows - 2)
+        c = min(max(startCol, 1), cols - 2)
+        for dr in range(-1, 2):
+            for dc in range(-1, 2):
+                safeZones.append((r + dr, c + dc))
+    elif rows >= 8 and cols >= 10:
+        # 3x2 safe area for easy-sized boards (3 cols x 2 rows)
+        r = min(startRow, rows - 2)
+        c = min(max(startCol, 1), cols - 2)
+        for dr in range(0, 2):
+            for dc in range(-1, 2):
+                safeZones.append((r + dr, c + dc))
+    else:
+        # 2x2 safe area for small boards
+        r = min(startRow, rows - 2)
+        c = min(startCol, cols - 2)
+        for dr in range(0, 2):
+            for dc in range(0, 2):
+                safeZones.append((r + dr, c + dc))
+    return safeZones
+
+def getSafeZoneSize(rows, cols):
+    return len(_buildSafeZone(rows // 2, cols // 2, rows, cols))
+
+def placeMines(app, startRow, startCol):
+    safeZones = _buildSafeZone(startRow, startCol, app.rows, app.cols)
 
     # Precompute candidates for mines
     candidates = []
@@ -85,6 +119,8 @@ def placeMines(app, startRow, startCol):
                 break
         else:
             break
+            
+    return safeZones
 
 #function from tetris/snake
 def getCell(app, x, y):
@@ -210,8 +246,10 @@ def lossAnimation(app):
 def triggerWin(app):
     #on the first click place the mines
     if app.firstClick:
-        placeMines(app, 0, 0)
+        safeZones = placeMines(app, 0, 0)
         app.firstClick = False
+        for r, c in safeZones:
+            revealCell(app, r, c)
     
     #show win screen and flash
     app.gameOver = True
@@ -288,37 +326,151 @@ def autoSolverLogic(app):
             app.autoSolveTimer = 2 
             # run every 2 steps
 
-            action = getNextSolverAction(app)
-            #Perform either a reveal or flag on the cell
-            if action:
-                actType, (r, c) = action
-                app.solverTarget = (r, c)
-                
-                #Handle first clicks, wins, and game overs (unlikely)
-                cell = app.board[r][c]
-                if actType == 'reveal':
-                    if app.firstClick:
-                        placeMines(app, r, c)
-                        app.firstClick = False
-                        app.startTime = time.time() - 1
-                        app.timer = 1
-                    if not cell.flagged:
-                        if cell.hasMine:
-                            startGameOver(app, cell, (r, c))
-                        else:
-                            wonGame(app, (r, c))
-                elif actType == 'flag':
-                    if not cell.flagged:
-                        cell.flagged = True
-                        cell.isFlagAnimating = True
-                        cell.flagScale = 0.1
-                        try:
-                            if getattr(app, 'plantSound', None) and not getattr(app, 'muted', False): app.plantSound.play(restart=True)
-                        except:
-                            pass
-            #if we dont't have a target pause and wait for the user to make a guess or we are finished
+            # First, execute the pending action (circle has arrived by now)
+            pending = getattr(app, '_pendingSolverAction', None)
+            if pending:
+                _performSolverAction(app, pending)
+                app._pendingSolverAction = None
+            
+            # Then, get the next action and set it as pending (circle will travel there)
+            nextAction = None
+            if getattr(app, '_solverQueue', []):
+                nextAction = app._solverQueue.pop(0)
             else:
+                nextAction = getNextSolverAction(app)
+                if nextAction is None:
+                    # Try full solver before giving up
+                    _fillSolverQueue(app)
+                    if getattr(app, '_solverQueue', []):
+                        nextAction = app._solverQueue.pop(0)
+            
+            if nextAction:
+                _setSolverTarget(app, nextAction)
+                app._pendingSolverAction = nextAction
+            elif not pending:
+                # No pending was executed and no next found — truly done
                 app.solverTarget = None
-                app.autoSolve = False # Stuck or done
+                app.autoSolve = False
         else:
             app.autoSolveTimer -= 1
+
+def _setSolverTarget(app, action):
+    actType, (r, c) = action
+    app.solverTarget = (r, c)
+    
+    # Set target pixel position for the animated circle
+    cellW = app.boardWidth / app.cols
+    cellH = app.boardHeight / app.rows
+    targetX = app.boardLeft + c * cellW + cellW / 2
+    targetY = app.boardTop + r * cellH + cellH / 2
+    app._solverTargetX = targetX
+    app._solverTargetY = targetY
+    # Snap to target if circle hasn't been placed yet
+    if getattr(app, '_solverCircleX', None) is None:
+        app._solverCircleX = targetX
+        app._solverCircleY = targetY
+
+def _performSolverAction(app, action):
+    actType, (r, c) = action
+    
+    cell = app.board[r][c]
+    if actType == 'reveal':
+        if app.firstClick:
+            safeZones = placeMines(app, r, c)
+            app.firstClick = False
+            app.startTime = time.time() - 1
+            app.timer = 1
+            for sr, sc in safeZones:
+                revealCell(app, sr, sc)
+        if not cell.flagged:
+            if cell.hasMine:
+                startGameOver(app, cell, (r, c))
+            else:
+                wonGame(app, (r, c))
+    elif actType == 'flag':
+        if not cell.flagged:
+            cell.flagged = True
+            cell.isFlagAnimating = True
+            cell.flagScale = 0.1
+            try:
+                if getattr(app, 'plantSound', None) and not getattr(app, 'muted', False): app.plantSound.play(restart=True)
+            except:
+                pass
+
+def _fillSolverQueue(app):
+    #Run the full solver (same logic as the hidden solver) to collect all remaining actions
+    rows, cols = app.rows, app.cols
+    board = app.board
+    revealed = set((r, c) for r in range(rows) for c in range(cols) if board[r][c].revealed)
+    known_mines = set((r, c) for r in range(rows) for c in range(cols) if board[r][c].flagged)
+    
+    queue = []
+    
+    #Simulate the hidden solver, collecting actions in order
+    while True:
+        progress = False
+        
+        actions = analyze_tier_1(board, rows, cols, revealed, known_mines)
+        if actions:
+            for actType, cell in actions:
+                if actType == 'reveal' and cell not in revealed:
+                    queue.append(('reveal', cell))
+                    revealed.add(cell)
+                    # Simulate flood-fill for zero cells
+                    if board[cell[0]][cell[1]].adjacentMines == 0:
+                        flood = [cell]
+                        while flood:
+                            fr, fc = flood.pop()
+                            for dr in [-1, 0, 1]:
+                                for dc in [-1, 0, 1]:
+                                    nr, nc = fr + dr, fc + dc
+                                    if 0 <= nr < rows and 0 <= nc < cols:
+                                        if (nr, nc) not in revealed and (nr, nc) not in known_mines:
+                                            revealed.add((nr, nc))
+                                            if board[nr][nc].adjacentMines == 0:
+                                                flood.append((nr, nc))
+                elif actType == 'flag' and cell not in known_mines:
+                    queue.append(('flag', cell))
+                    known_mines.add(cell)
+            progress = True
+        
+        if not progress:
+            actions = analyze_tier_2(board, rows, cols, revealed, known_mines)
+            if actions:
+                for actType, cell in actions:
+                    if actType == 'reveal' and cell not in revealed:
+                        queue.append(('reveal', cell))
+                        revealed.add(cell)
+                        if board[cell[0]][cell[1]].adjacentMines == 0:
+                            flood = [cell]
+                            while flood:
+                                fr, fc = flood.pop()
+                                for dr in [-1, 0, 1]:
+                                    for dc in [-1, 0, 1]:
+                                        nr, nc = fr + dr, fc + dc
+                                        if 0 <= nr < rows and 0 <= nc < cols:
+                                            if (nr, nc) not in revealed and (nr, nc) not in known_mines:
+                                                revealed.add((nr, nc))
+                                                if board[nr][nc].adjacentMines == 0:
+                                                    flood.append((nr, nc))
+                    elif actType == 'flag' and cell not in known_mines:
+                        queue.append(('flag', cell))
+                        known_mines.add(cell)
+                progress = True
+        
+        if not progress:
+            actions = analyze_global(rows, cols, app.numMines, revealed, known_mines)
+            if actions:
+                for actType, cell in actions:
+                    if actType == 'reveal' and cell not in revealed:
+                        queue.append(('reveal', cell))
+                        revealed.add(cell)
+                    elif actType == 'flag' and cell not in known_mines:
+                        queue.append(('flag', cell))
+                        known_mines.add(cell)
+                progress = True
+        
+        if not progress:
+            break
+    
+    app._solverQueue = queue

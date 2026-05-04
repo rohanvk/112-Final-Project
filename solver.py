@@ -82,23 +82,29 @@ def getNextSolverAction(app):
     board = app.board
 
     #gets the current board state
-    revealed = [(r, c) for r in range(rows) for c in range(cols) if board[r][c].revealed]
+    revealed = set((r, c) for r in range(rows) for c in range(cols) if board[r][c].revealed)
     known_mines = set([(r, c) for r in range(rows) for c in range(cols) if board[r][c].flagged])
     
     #opens the middle cell if there's nothing open
     if not revealed:
         return ('reveal', (rows // 2, cols // 2))
 
+    # Sort actions by distance from solver's current position for natural movement
+    curPos = getattr(app, 'solverTarget', None) or (rows // 2, cols // 2)
+    def distKey(action):
+        _, (r, c) = action
+        return (r - curPos[0]) ** 2 + (c - curPos[1]) ** 2
+
     #passes up the results of the solver logic one step at a time
 
     actions = analyze_tier_1(board, rows, cols, revealed, known_mines)
-    if actions: return actions[0]
+    if actions: return min(actions, key=distKey)
     
     actions = analyze_tier_2(board, rows, cols, revealed, known_mines)
-    if actions: return actions[0]
+    if actions: return min(actions, key=distKey)
     
     actions = analyze_global(rows, cols, app.numMines, revealed, known_mines)
-    if actions: return actions[0]
+    if actions: return min(actions, key=distKey)
     
     return None
 

@@ -1,6 +1,6 @@
 from cmu_graphics import *
 import time
-from game_engine import restartApp, placeMines, getCell, checkWin, startGameOver, triggerWin, wonGame, autoSolverLogic, shakeScreen, lossAnimation
+from game_engine import restartApp, placeMines, getCell, checkWin, startGameOver, triggerWin, wonGame, autoSolverLogic, shakeScreen, lossAnimation, revealCell
 from ui import drawCells, drawTimer, drawStatus, drawMenu, drawGameScreens
 from animations import stepCellAnimations, stepFlagAnimations, stepFlagDespawn, stepConfetti, drawConfetti, removeFlag
 from ui_checks import switchScreen, _isGuarded, checkMenuHover, checkAudioButton, checkBackButton, autoSolver, menuLogic, startOverButton
@@ -79,10 +79,14 @@ def game_onMousePress(app, mouseX, mouseY, button=0):
         if cell.flagged: return 
         
         if app.firstClick:
-            placeMines(app, row, col)
+            safeZones = placeMines(app, row, col)
             app.firstClick = False
             app.startTime = time.time() - 1
             app.timer = 1
+            
+            # Explicitly reveal the entire safe area to guarantee the opening
+            for r, c in safeZones:
+                revealCell(app, r, c)
 
         if cell.hasMine:
             startGameOver(app, cell, coords)
@@ -117,6 +121,12 @@ def game_onStep(app):
         takeStep(app)
         
         autoSolverLogic(app)
+        
+        # Lerp solver circle toward target position
+        if getattr(app, '_solverTargetX', None) is not None and app._solverCircleX is not None:
+            lerpSpeed = 0.3
+            app._solverCircleX += (app._solverTargetX - app._solverCircleX) * lerpSpeed
+            app._solverCircleY += (app._solverTargetY - app._solverCircleY) * lerpSpeed
 
     if app.gameOver and getattr(app, 'autoSolve', False):
         app.autoSolve = False

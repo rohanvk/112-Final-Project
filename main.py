@@ -3,6 +3,9 @@ import sys
 import os
 import traceback
 
+# Increase recursion limit for large custom boards (30x40 = 1200 cells) flood-fill
+sys.setrecursionlimit(1500)
+
 # Redirect stdout and stderr to devnull if they are None to prevent crashes in unwindowed exes
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
@@ -113,6 +116,7 @@ def onAppStart(app):
     app.customCols = 18
     app.customMines = int(14 * 18 * 0.2)
     app.customNoGuess = True
+    app._noGuessAutoDisabled = False
     app.customConfigured = False
 
     # Audio — wrap in try/except so missing files don't crash the app
