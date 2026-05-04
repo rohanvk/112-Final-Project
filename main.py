@@ -80,7 +80,7 @@ def onAppStart(app):
     app.isLoaded = False
     app.setMaxShapeCount(100000) # Remove CMU Graphics shape limit to prevent exceptions
     
-    app.version = "v1.4.1"
+    app.version = "v1.4.2"
     app.updateAvailable = False
     app.updateUrl = ""
     
