@@ -57,7 +57,7 @@ jobs:
         pip install -r requirements.txt
 
     - name: Build Mac App
-      run: pyinstaller --windowed --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" main.py
+      run: pyinstaller --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" main.py
 
     - name: Package into DMG
       run: |
