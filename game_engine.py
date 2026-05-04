@@ -381,7 +381,8 @@ def _performSolverAction(app, action):
             app.startTime = time.time() - 1
             app.timer = 1
             for sr, sc in safeZones:
-                revealCell(app, sr, sc)
+                if (sr, sc) != (r, c):
+                    revealCell(app, sr, sc)
         if not cell.flagged:
             if cell.hasMine:
                 startGameOver(app, cell, (r, c))

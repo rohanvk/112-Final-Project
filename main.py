@@ -88,7 +88,7 @@ def onAppStart(app):
                         return 'v' + line.split('=')[1].strip()
         except:
             pass
-        return "v1.4.2" # Fallback if iss file isn't found
+        return "v1.4.3.2" # Fallback if iss file isn't found
         
     app.version = _getVersion()
     app.updateAvailable = False

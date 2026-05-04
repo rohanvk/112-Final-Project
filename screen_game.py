@@ -86,7 +86,8 @@ def game_onMousePress(app, mouseX, mouseY, button=0):
             
             # Explicitly reveal the entire safe area to guarantee the opening
             for r, c in safeZones:
-                revealCell(app, r, c)
+                if (r, c) != (row, col):
+                    revealCell(app, r, c)
 
         if cell.hasMine:
             startGameOver(app, cell, coords)
