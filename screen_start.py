@@ -1,6 +1,7 @@
 from cmu_graphics import *
 from button import Button
 from ui_checks import switchScreen, _isGuarded
+import webbrowser
 
 #Handles the start screen
 
@@ -33,6 +34,10 @@ def start_redrawAll(app):
     
     for btn in getStartButtons(app):
         btn.draw()
+        
+    if getattr(app, 'updateAvailable', False):
+        updateBtn = Button(app.width/2, app.height * 0.05, 250, 40, "Update Available! Click Here", fill=rgb(220, 50, 50), textFill='white', radius=8, textSize=16)
+        updateBtn.draw()
 
 #Used some ai here to debug the button pressing (some would double press or not register)
 def start_onMousePress(app, mouseX, mouseY):
@@ -44,6 +49,11 @@ def start_onMousePress(app, mouseX, mouseY):
         switchScreen(app, 'custom')
     elif buttons[2].contains(mouseX, mouseY):
         switchScreen(app, 'instructions')
+        
+    if getattr(app, 'updateAvailable', False):
+        updateBtn = Button(app.width/2, app.height * 0.05, 250, 40, "Update Available! Click Here", fill=rgb(220, 50, 50), textFill='white', radius=8, textSize=16)
+        if updateBtn.contains(mouseX, mouseY):
+            webbrowser.open(getattr(app, 'updateUrl', 'https://github.com/rohanvk/112-Final-Project/releases'))
 
 def start_onStep(app):
     app.screenGuard = False

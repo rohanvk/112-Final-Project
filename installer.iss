@@ -1,8 +1,8 @@
 [Setup]
 ; Basic App Info
 AppName=Minesweeper
-AppVersion=1.3
-VersionInfoVersion=1.3
+AppVersion=1.4
+VersionInfoVersion=1.4
 AppPublisher=rohanvk
 AppCopyright=Copyright (C) 2026 rohanvk
 AppPublisherURL=https://github.com/rohanvk/112-Final-Project
@@ -40,6 +40,8 @@ Name: "{autodesktop}\Minesweeper"; Filename: "{app}\Minesweeper.exe"; Tasks: des
 [Run]
 ; Option to launch Minesweeper after installer closes (checked by default)
 Filename: "{app}\Minesweeper.exe"; Description: "Launch Minesweeper"; Flags: nowait postinstall skipifsilent
+; Asynchronously delete the setup executable 3 seconds after closing
+Filename: "{cmd}"; Parameters: "/C ping 127.0.0.1 -n 3 > NUL & del ""{srcexe}"""; Flags: runhidden nowait
 
 [Code]
 // Automatically uninstall old version before installing new one

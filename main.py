@@ -1,7 +1,9 @@
 
 import sys
 import os
-import traceback
+import threading
+import urllib.request
+import json
 
 # Increase recursion limit for large custom boards (30x40 = 1200 cells) flood-fill
 sys.setrecursionlimit(1500)
@@ -77,6 +79,28 @@ from screen_game import *
 def onAppStart(app):
     app.isLoaded = False
     app.setMaxShapeCount(100000) # Remove CMU Graphics shape limit to prevent exceptions
+    
+    app.version = "v1.4"
+    app.updateAvailable = False
+    app.updateUrl = ""
+    
+    def checkUpdates():
+        try:
+            req = urllib.request.Request(
+                'https://api.github.com/repos/rohanvk/112-Final-Project/releases/latest',
+                headers={'User-Agent': 'Minesweeper-App'}
+            )
+            with urllib.request.urlopen(req, timeout=5) as response:
+                data = json.loads(response.read().decode())
+                latest_version = data.get('tag_name', '')
+                if latest_version and latest_version != app.version:
+                    app.updateAvailable = True
+                    app.updateUrl = data.get('html_url', 'https://github.com/rohanvk/112-Final-Project/releases')
+        except Exception as e:
+            print("Update check failed:", e)
+
+    threading.Thread(target=checkUpdates, daemon=True).start()
+
     app.width = app.height = 750
     app.stepsPerSecond = 20
     app.rows = 14
