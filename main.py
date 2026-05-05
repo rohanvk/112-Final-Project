@@ -8,11 +8,15 @@ import json
 # Increase recursion limit for large custom boards (30x40 = 1200 cells) flood-fill
 sys.setrecursionlimit(1500)
 
-# Redirect stdout and stderr to devnull if they are None to prevent crashes in unwindowed exes
-if sys.stdout is None:
+# Redirect stdout and stderr to devnull in frozen apps to prevent crashes from prints to bad file descriptors
+if getattr(sys, 'frozen', False):
     sys.stdout = open(os.devnull, "w")
-if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
+else:
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w")
 
 # Helper to resolve paths inside PyInstaller bundles
 def get_path(relative_path):
