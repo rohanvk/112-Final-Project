@@ -9,6 +9,17 @@ import json
 # Redirect stdout and stderr to a log file in the temp directory in frozen apps
 if getattr(sys, 'frozen', False):
     import tempfile
+    
+    # Fix macOS Finder launching by stripping the -psn argument
+    if sys.platform == 'darwin':
+        sys.argv = [arg for arg in sys.argv if not arg.startswith('-psn_')]
+        
+    try:
+        # Set working directory to the bundled app directory
+        os.chdir(sys._MEIPASS)
+    except Exception:
+        pass
+        
     try:
         log_path = os.path.join(tempfile.gettempdir(), "minesweeper_mac_log.txt")
         log_file = open(log_path, "w")
