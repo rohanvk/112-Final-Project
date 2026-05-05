@@ -14,14 +14,18 @@ if getattr(sys, 'frozen', False):
         log_file = open(log_path, "w")
         sys.stdout = log_file
         sys.stderr = log_file
+        sys.stdin = open(os.devnull, "r")
     except Exception:
         sys.stdout = open(os.devnull, "w")
         sys.stderr = open(os.devnull, "w")
+        sys.stdin = open(os.devnull, "r")
 else:
     if sys.stdout is None:
         sys.stdout = open(os.devnull, "w")
     if sys.stderr is None:
         sys.stderr = open(os.devnull, "w")
+    if sys.stdin is None:
+        sys.stdin = open(os.devnull, "r")
 
 # Helper to resolve paths inside PyInstaller bundles
 def get_path(relative_path):
