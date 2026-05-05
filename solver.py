@@ -12,18 +12,20 @@ def isBoardSolvableNoGuesses(app, startRow, startCol):
     known_safe = set([(startRow, startCol)])
     
     # Helper to reveal a cell and propagate 0s
-    def reveal(r, c):
-        if (r, c) in revealed: return
-        revealed.add((r, c))
-        if board[r][c].adjacentMines == 0:
-            for dr in [-1, 0, 1]:
-                for dc in [-1, 0, 1]:
-                    nr, nc = r+dr, c+dc
-                    if 0 <= nr < rows and 0 <= nc < cols:
-                        #recursively opens cells
-                        if (nr, nc) not in revealed and (nr, nc) not in known_mines:
-                            known_safe.add((nr, nc))
-                            reveal(nr, nc)
+    def reveal(start_r, start_c):
+        stack = [(start_r, start_c)]
+        while stack:
+            r, c = stack.pop()
+            if (r, c) in revealed: continue
+            revealed.add((r, c))
+            if board[r][c].adjacentMines == 0:
+                for dr in [-1, 0, 1]:
+                    for dc in [-1, 0, 1]:
+                        nr, nc = r+dr, c+dc
+                        if 0 <= nr < rows and 0 <= nc < cols:
+                            if (nr, nc) not in revealed and (nr, nc) not in known_mines:
+                                known_safe.add((nr, nc))
+                                stack.append((nr, nc))
                             
     reveal(startRow, startCol)
     

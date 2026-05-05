@@ -148,25 +148,37 @@ def checkWin(app):
     return True
 
 #reveal all adjacent empty cells
-def revealCell(app, r, c): 
-    if not (0 <= r < app.rows and 0 <= c < app.cols): return 0
-    cell = app.board[r][c]
-    if cell.revealed: return 0
+def revealCell(app, start_r, start_c): 
+    if not (0 <= start_r < app.rows and 0 <= start_c < app.cols): return 0
+    start_cell = app.board[start_r][start_c]
+    if start_cell.revealed: return 0
 
-    cell.revealed = True
-    cell.isAnimating = True
-    cell.animScale = 1.0
-    cell.animOffsetX = 0
-    cell.animOffsetY = 0
-    cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
-    cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
+    stack = [(start_r, start_c)]
+    count = 0
 
-    count = 1
-    # recursive reveal
-    if cell.adjacentMines == 0:
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                count += revealCell(app, r + dr, c + dc)
+    while stack:
+        r, c = stack.pop()
+        cell = app.board[r][c]
+        if cell.revealed: continue
+
+        cell.revealed = True
+        cell.isAnimating = True
+        cell.animScale = 1.0
+        cell.animOffsetX = 0
+        cell.animOffsetY = 0
+        cell.animDx = random.choice([-1, 1]) * random.randint(3, 8)
+        cell.animDy = random.choice([-1, 1]) * random.randint(3, 8)
+        
+        count += 1
+        
+        if cell.adjacentMines == 0:
+            for dr in [-1, 0, 1]:
+                for dc in [-1, 0, 1]:
+                    if dr == 0 and dc == 0: continue
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < app.rows and 0 <= nc < app.cols:
+                        if not app.board[nr][nc].revealed:
+                            stack.append((nr, nc))
     return count
 
 #sets up gameover

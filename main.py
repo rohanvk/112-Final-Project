@@ -5,8 +5,6 @@ import threading
 import urllib.request
 import json
 
-# Increase recursion limit for large custom boards (30x40 = 1200 cells) flood-fill
-sys.setrecursionlimit(1500)
 
 # Redirect stdout and stderr to a log file in the temp directory in frozen apps
 if getattr(sys, 'frozen', False):
