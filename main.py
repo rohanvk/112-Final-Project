@@ -8,10 +8,17 @@ import json
 # Increase recursion limit for large custom boards (30x40 = 1200 cells) flood-fill
 sys.setrecursionlimit(1500)
 
-# Redirect stdout and stderr to devnull in frozen apps to prevent crashes from prints to bad file descriptors
+# Redirect stdout and stderr to a log file in the temp directory in frozen apps
 if getattr(sys, 'frozen', False):
-    sys.stdout = open(os.devnull, "w")
-    sys.stderr = open(os.devnull, "w")
+    import tempfile
+    try:
+        log_path = os.path.join(tempfile.gettempdir(), "minesweeper_mac_log.txt")
+        log_file = open(log_path, "w")
+        sys.stdout = log_file
+        sys.stderr = log_file
+    except Exception:
+        sys.stdout = open(os.devnull, "w")
+        sys.stderr = open(os.devnull, "w")
 else:
     if sys.stdout is None:
         sys.stdout = open(os.devnull, "w")
@@ -244,4 +251,7 @@ def onAppStart(app):
 def main():
     runAppWithScreens(initialScreen='start')
 
-main()
+if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
+    main()
