@@ -173,6 +173,9 @@ def onAppStart(app):
         app.audioImage = None
 
     def _safeSound(path):
+        # Disable audio on frozen mac apps due to pygame.mixer MP3 segfaults
+        if sys.platform == 'darwin' and getattr(sys, 'frozen', False):
+            return None
         try:
             return Sound(get_path(path))
         except:
