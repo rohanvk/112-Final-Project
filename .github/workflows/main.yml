@@ -53,11 +53,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pyinstaller
+        pip install py2app
         pip install -r requirements.txt
 
     - name: Build Mac App
-      run: pyinstaller --onedir --windowed --collect-all cmu_graphics --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" --add-data "installer.iss:." main.py
+      run: python setup.py py2app
 
     - name: Package into DMG
       run: |

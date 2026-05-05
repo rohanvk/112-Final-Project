@@ -38,13 +38,16 @@ else:
     if sys.stdin is None:
         sys.stdin = open(os.devnull, "r")
 
-# Helper to resolve paths inside PyInstaller bundles
+# Helper to resolve paths inside PyInstaller bundles and py2app
 def get_path(relative_path):
-    """ Get the absolute path to a resource, works for dev and for PyInstaller EXE """
+    """ Get the absolute path to a resource, works for dev and for PyInstaller/py2app """
     try:
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")
+        if sys.platform == 'darwin' and getattr(sys, 'frozen', False):
+            base_path = os.environ.get('RESOURCEPATH', os.path.join(os.path.dirname(sys.executable), '..', 'Resources'))
+        else:
+            base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
 #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
