@@ -1,8 +1,8 @@
 [Setup]
 ; Basic App Info
 AppName=Minesweeper
-AppVersion=1.6.5
-VersionInfoVersion=1.6.5
+AppVersion=1.6.6
+VersionInfoVersion=1.6.6
 AppPublisher=rohanvk
 AppCopyright=Copyright (C) 2026 rohanvk
 AppPublisherURL=https://github.com/rohanvk/112-Final-Project
