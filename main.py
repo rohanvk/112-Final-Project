@@ -45,10 +45,11 @@ def get_path(relative_path):
             # In a Mac .app bundle, data files are placed in Contents/Resources
             base_path = os.path.join(os.path.dirname(sys.executable), '..', 'Resources')
         else:
-            # On Windows --onedir builds, data is placed in the executable directory
-            base_path = os.path.dirname(sys.executable)
+            # On Windows Pyinstaller builds, data is inside sys._MEIPASS (_internal)
+            base_path = sys._MEIPASS
     else:
-        base_path = os.path.abspath(".")
+        # Use the directory containing main.py as the base path for local development
+        base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
 #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
