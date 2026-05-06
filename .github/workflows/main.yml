@@ -57,7 +57,10 @@ jobs:
         pip install -r requirements.txt
 
     - name: Build Mac App
-      run: python setup.py py2app
+      run: |
+        PYGAME_DIR=$(python -c "import pygame, os; print(os.path.dirname(pygame.__file__))")
+        touch "$PYGAME_DIR/pygame_icon.icns"
+        python setup.py py2app
 
     - name: Package into DMG
       run: |
