@@ -53,16 +53,17 @@ jobs:
 
     - name: Install dependencies
       run: |
+        brew install cairo pkg-config
         pip install pyinstaller
         pip install -r requirements.txt
 
     - name: Build Mac App
-      run: pyinstaller --onedir --collect-all cmu_graphics --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" --add-data "installer.iss:." main.py
+      run: pyinstaller --windowed --onedir --collect-all CMU_graphics --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" --add-data "installer.iss:." main.py
 
     - name: Package into Zip
       run: |
         cd dist
-        zip -r Minesweeper-Mac.zip Minesweeper/
+        zip -r Minesweeper-Mac.zip Minesweeper.app/
 
     - name: Upload Mac Zip Artifact
       uses: actions/upload-artifact@v4

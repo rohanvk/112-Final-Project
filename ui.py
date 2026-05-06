@@ -1,4 +1,4 @@
-from cmu_graphics import *
+from CMU_graphics import *
 from board import *
 #this file is pretty self explanatory 
 

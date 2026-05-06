@@ -1,4 +1,4 @@
-from cmu_graphics import *
+from CMU_graphics import *
 import time
 from game_engine import restartApp, placeMines, getCell, checkWin, startGameOver, triggerWin, wonGame, autoSolverLogic, shakeScreen, lossAnimation, revealCell
 from ui import drawCells, drawTimer, drawStatus, drawMenu, drawGameScreens

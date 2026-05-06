@@ -1,4 +1,4 @@
-from cmu_graphics import *
+from CMU_graphics import *
 from game_engine import restartApp
 from ui import getMenuButtonWidth
 

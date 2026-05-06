@@ -79,14 +79,14 @@ Pre-compiled, standalone executables are automatically generated for both Window
 
 1. Go to the **Releases** tab on GitHub.
 2. **For Windows**: Download the `Minesweeper_Setup.exe` installer, which will automatically install the game and place shortcuts on your desktop.
-3. **For Mac**: Download the `.dmg` file. 
-   - *Note for Mac Users*: Because the app is not signed with an Apple Developer certificate, you must bypass Gatekeeper quarantine. After copying `Minesweeper.app` to your Applications folder, open a terminal and run: `xattr -cr /Applications/Minesweeper.app`
+3. **For Mac**: Download the `Minesweeper-Mac.zip` file.
+   - *Note for Mac Users*: Because the app is not signed with an Apple Developer certificate, you must bypass Gatekeeper quarantine. After unzipping and moving `Minesweeper.app` to your Applications folder, open a terminal and run: `xattr -cr /Applications/Minesweeper.app`
 
 ## Running from Source
 
 **Requirements:**
 - Python 3.11+
-- CMU Graphics (`cmu_graphics`)
+- Custom Local Engine based on CMU Graphics (uses `pygame-ce` and `pycairo`)
 - Pillow (`PIL`)
 
 ```bash

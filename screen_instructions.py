@@ -1,4 +1,4 @@
-from cmu_graphics import *
+from CMU_graphics import *
 from button import Button
 from ui_checks import switchScreen, _isGuarded
 

@@ -1,4 +1,4 @@
-from cmu_graphics import *
+from CMU_graphics import *
 from ui import *
 import random
 

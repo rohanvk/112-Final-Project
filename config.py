@@ -1,4 +1,4 @@
-from cmu_graphics import rgb
+from CMU_graphics import rgb
 
 #this file has all of the colors and settings for the game
 

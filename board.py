@@ -1,4 +1,4 @@
-from cmu_graphics import *
+from CMU_graphics import *
 
 #When a cell is animating, it recieves all of this data
 class AnimationData:

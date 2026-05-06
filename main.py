@@ -38,16 +38,17 @@ else:
     if sys.stdin is None:
         sys.stdin = open(os.devnull, "r")
 
-# Helper to resolve paths inside PyInstaller bundles and py2app
 def get_path(relative_path):
     """ Get the absolute path to a resource, works for dev and for PyInstaller/py2app """
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        if sys.platform == 'darwin' and getattr(sys, 'frozen', False):
-            base_path = os.environ.get('RESOURCEPATH', os.path.join(os.path.dirname(sys.executable), '..', 'Resources'))
+    if getattr(sys, 'frozen', False):
+        if sys.platform == 'darwin':
+            # In a Mac .app bundle, data files are placed in Contents/Resources
+            base_path = os.path.join(os.path.dirname(sys.executable), '..', 'Resources')
         else:
-            base_path = os.path.abspath(".")
+            # On Windows, data is in sys._MEIPASS
+            base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
 #For all citations of AI, Gemini Pro 3.1 was used (Claude Opus 4.6 (thinking and planning) was used for finding bugs)
@@ -86,7 +87,7 @@ Multiple Screens: includes guards to prevent early switching or unexpected behav
 
 Controls: left-click (reveal), right-click (flag), spacebar (restart), and 'P' (pause/unpause).'''
 
-from cmu_graphics import *
+from CMU_graphics import *
 from PIL import Image as PILImage #image optimization
 import time #need because otherwise timer tracks framerate
 
@@ -265,6 +266,16 @@ def onAppStart(app):
     app.isLoaded = True
 
 def main():
+    if sys.platform == 'darwin' and getattr(sys, 'frozen', False):
+        try:
+            import subprocess
+            subprocess.call([
+                '/usr/bin/osascript', '-e', 
+                f'tell app "System Events" to set frontmost of every process whose unix id is {os.getpid()} to true'
+            ])
+        except Exception:
+            pass
+            
     runAppWithScreens(initialScreen='start')
 
 if __name__ == '__main__':
