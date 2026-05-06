@@ -1171,6 +1171,20 @@ class App(object):
         pygame.init()
         pygame.display.set_caption(self.title)
 
+        try:
+            import sys
+            import os
+            if getattr(sys, 'frozen', False):
+                if sys.platform == 'darwin':
+                    icon_path = os.path.join(os.path.dirname(sys.executable), '..', 'Resources', 'images', 'minesweeper.ico')
+                else:
+                    icon_path = os.path.join(sys._MEIPASS, 'images', 'minesweeper.ico')
+            else:
+                icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'images', 'minesweeper.ico')
+            pygame.display.set_icon(pygame.image.load(icon_path))
+        except Exception:
+            pass
+
         self._screen = None
         self.updateScreen(True)
 
