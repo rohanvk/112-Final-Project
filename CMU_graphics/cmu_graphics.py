@@ -1178,7 +1178,7 @@ class App(object):
                 if sys.platform == 'darwin':
                     icon_path = os.path.join(os.path.dirname(sys.executable), '..', 'Resources', 'images', 'minesweeper.ico')
                 else:
-                    icon_path = os.path.join(sys._MEIPASS, 'images', 'minesweeper.ico')
+                    icon_path = os.path.join(os.path.dirname(sys.executable), 'images', 'minesweeper.ico')
             else:
                 icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'images', 'minesweeper.ico')
             pygame.display.set_icon(pygame.image.load(icon_path))

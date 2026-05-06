@@ -45,8 +45,8 @@ def get_path(relative_path):
             # In a Mac .app bundle, data files are placed in Contents/Resources
             base_path = os.path.join(os.path.dirname(sys.executable), '..', 'Resources')
         else:
-            # On Windows, data is in sys._MEIPASS
-            base_path = sys._MEIPASS
+            # On Windows --onedir builds, data is placed in the executable directory
+            base_path = os.path.dirname(sys.executable)
     else:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
