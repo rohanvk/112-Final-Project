@@ -58,6 +58,7 @@ jobs:
 
     - name: Build Mac App
       run: |
+        export PYGAME_HIDE_SUPPORT_PROMPT=1
         PYGAME_DIR=$(python -c "import pygame, os; print(os.path.dirname(pygame.__file__))")
         touch "$PYGAME_DIR/pygame_icon.icns"
         python setup.py py2app
