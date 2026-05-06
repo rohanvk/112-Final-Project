@@ -47,6 +47,7 @@ A fully-featured Minesweeper clone built with CMU Graphics for the 15-112 Final 
 ├── solver.py              # Solver orchestrator (no-guess verification + auto-solver)
 ├── solver_utils.py        # Pure logic analysis (Basic, Advanced, Global deductions)
 ├── installer.iss          # Inno Setup configuration for Windows Installer
+├── CMU_graphics/          # Local, decoupled copy of the CMU Graphics framework
 ├── images/                # UI images (flags, audio icon, win/lose screens)
 └── audio/                 # Sound effects and music
 ```

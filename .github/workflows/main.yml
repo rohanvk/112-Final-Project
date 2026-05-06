@@ -112,6 +112,4 @@ jobs:
           | 🍎 **Mac** | `Minesweeper-Mac.zip` — Compressed executable |
 
           **Note for Mac Users:** 
-          If you receive an error that the app is damaged or cannot be opened, you will need to bypass Apple's Gatekeeper quarantine for unsigned apps.
-          Open your terminal, navigate to your Downloads folder, unzip, and run:
-          `xattr -cr Minesweeper/`
+          Because the app is not signed with an Apple Developer certificate, you must bypass Gatekeeper quarantine. After unzipping and moving `Minesweeper.app` to your Applications folder, open a terminal and run: `xattr -cr /Applications/Minesweeper.app`
