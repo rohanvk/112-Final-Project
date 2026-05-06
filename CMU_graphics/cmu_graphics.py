@@ -1555,7 +1555,7 @@ def run():
     MAINLOOP_RUN = True
 
     if not os.environ.get('CI', False):
-        threading.Thread(target=CSAcademyConsole().interact).start()
+        pass # threading.Thread(target=CSAcademyConsole().interact).start()
 
     try:
         app._app.run()
@@ -1692,14 +1692,14 @@ def print_debug_info():
     current_directory = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(current_directory, 'meta', 'version.txt')) as f:
         version = f.read().strip()
-    print('=' * 80)
-    print('CMU Graphics Version:', version)
-    print('Platform:', sys.platform)
-    print('Python Version:', '.'.join(platform.python_version_tuple()))
-    print('Executable Path:', sys.executable)
-    print('Python path:', sys.path)
-    print('Working Directory:', current_directory)
-    print('=' * 80)
+    # print('=' * 80)
+    # print('CMU Graphics Version:', version)
+    # print('Platform:', sys.platform)
+    # print('Python Version:', '.'.join(platform.python_version_tuple()))
+    # print('Executable Path:', sys.executable)
+    # print('Python path:', sys.path)
+    # print('Working Directory:', current_directory)
+    # print('=' * 80)
 
 
 if 'CMU_GRAPHICS_DEBUG' in __main__.__dict__:
