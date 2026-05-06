@@ -53,25 +53,22 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install py2app
+        pip install pyinstaller
         pip install -r requirements.txt
 
     - name: Build Mac App
-      run: |
-        export PYGAME_HIDE_SUPPORT_PROMPT=1
-        PYGAME_DIR=$(python -c "import pygame, os; print(os.path.dirname(pygame.__file__))")
-        touch "$PYGAME_DIR/pygame_icon.icns"
-        python setup.py py2app
+      run: pyinstaller --onedir --collect-all cmu_graphics --name="Minesweeper" --icon="images/minesweeper.icns" --add-data "images:images" --add-data "audio:audio" --add-data "installer.iss:." main.py
 
-    - name: Package into DMG
+    - name: Package into Zip
       run: |
-        hdiutil create -volname "Minesweeper" -srcfolder "dist/Minesweeper.app" -ov -format UDZO "dist/Minesweeper.dmg"
+        cd dist
+        zip -r Minesweeper-Mac.zip Minesweeper/
 
-    - name: Upload Mac DMG Artifact
+    - name: Upload Mac Zip Artifact
       uses: actions/upload-artifact@v4
       with:
         name: mac-installer
-        path: dist/*.dmg
+        path: dist/*.zip
 
   create-release:
     # This job waits for both builds to finish successfully before running
@@ -102,7 +99,7 @@ jobs:
         # Grabs all .exe and .dmg files from the downloaded folders
         files: |
           release-files/*_Setup.exe
-          release-files/*.dmg
+          release-files/*.zip
         # Automatically generates release notes based on your recent commits!
         generate_release_notes: true
         append_body: true
@@ -111,9 +108,9 @@ jobs:
           | Platform | File |
           |---|---|
           | 🪟 **Windows** | `Minesweeper_Setup.exe` — Installer (recommended) |
-          | 🍎 **Mac** | `Minesweeper.dmg` — Disk image |
+          | 🍎 **Mac** | `Minesweeper-Mac.zip` — Compressed executable |
 
           **Note for Mac Users:** 
           If you receive an error that the app is damaged or cannot be opened, you will need to bypass Apple's Gatekeeper quarantine for unsigned apps.
-          Open your terminal and run:
-          `xattr -cr /path/to/your/extracted/Minesweeper.app`
+          Open your terminal, navigate to your Downloads folder, unzip, and run:
+          `xattr -cr Minesweeper/`
